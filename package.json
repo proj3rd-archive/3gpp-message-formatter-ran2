@@ -1,0 +1,7 @@
+{
+  "name": "3gpp-message-formatter-ran2",
+  "main": "formatter.js",
+  "dependencies": {
+    "xlsx": "^0.13.0"
+  }
+}
