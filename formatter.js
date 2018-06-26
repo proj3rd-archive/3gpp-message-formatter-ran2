@@ -84,7 +84,11 @@ function expand(messageIE, asn1Json, depth = 0) {
             default:
                 if (!builtIns.includes(messageIE['type'].split(' ')[0])) {
                     if ('parameters' in messageIE) {
-                        messageIE['type'] += ` {${messageIE['parameters'].join(', ')}}`;
+                        if (messageIE['parameters'].length) {
+                            messageIE['type'] += ` {${messageIE['parameters']
+                                                                .join(', ')}}`;
+                        }
+                        messageIE['parameters'] = [];
                     } else {
                         messageIE['subIE'] = messageIE['type'];
                         let type = getUniqueMessageIE(parser.getAsn1ByName(
