@@ -50,7 +50,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     let containedIE = getUniqueMessageIE(parser.getAsn1ByName(
                                                     containedName, asn1Json));
                     delete containedIE['inventory'];
-                    messageIE['content'] = [containedIE];
+                    messageIE['content'] = [JSON.parse(JSON.stringify(containedIE))];
                     messageIE['content'][0]['name'] = containedName;
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
@@ -68,7 +68,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     let memberIE = getUniqueMessageIE(parser.getAsn1ByName(
                                                             memberName, asn1Json));
                     delete memberIE['inventory'];
-                    messageIE['content'] = [memberIE];
+                    messageIE['content'] = [JSON.parse(JSON.stringify(memberIE))];
                     messageIE['content'][0]['name'] = memberName;
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
