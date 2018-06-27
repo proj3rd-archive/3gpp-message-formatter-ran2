@@ -10,8 +10,9 @@ var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
                 'BIT', 'OCTET' /* HACK */];
 
 function format(messageIEname, asn1Json) {
-    let messageIE = getUniqueMessageIE(parser.getAsn1ByName(messageIEname,
-                                                                asn1Json));
+    let messageIE = JSON.parse(JSON.stringify(
+                        getUniqueMessageIE(parser.getAsn1ByName(messageIEname,
+                                                                asn1Json))));
     messageIE['name'] = messageIEname;
     delete messageIE['inventory'];
     let depthMax = expand(messageIE, asn1Json);
