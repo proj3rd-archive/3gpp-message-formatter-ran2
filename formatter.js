@@ -10,9 +10,8 @@ var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
                 'BIT', 'OCTET' /* HACK */];
 
 function format(messageIEname, asn1Json) {
-    let messageIE = JSON.parse(JSON.stringify(
-                        getUniqueMessageIE(parser.getAsn1ByName(messageIEname,
-                                                                asn1Json))));
+    let messageIE = getUniqueMessageIE(parser.getAsn1ByName(messageIEname,
+                                                            asn1Json));
     messageIE['name'] = messageIEname;
     delete messageIE['inventory'];
     let depthMax = expand(messageIE, asn1Json);
@@ -51,7 +50,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     let containedIE = getUniqueMessageIE(parser.getAsn1ByName(
                                                     containedName, asn1Json));
                     delete containedIE['inventory'];
-                    messageIE['content'] = [JSON.parse(JSON.stringify(containedIE))];
+                    messageIE['content'] = [containedIE];
                     messageIE['content'][0]['name'] = containedName;
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
@@ -69,7 +68,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     let memberIE = getUniqueMessageIE(parser.getAsn1ByName(
                                                             memberName, asn1Json));
                     delete memberIE['inventory'];
-                    messageIE['content'] = [JSON.parse(JSON.stringify(memberIE))];
+                    messageIE['content'] = [memberIE];
                     messageIE['content'][0]['name'] = memberName;
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
@@ -222,7 +221,7 @@ Honestly, I didn't expect this.
 Please report an issue with the message/IE name and specification`;
             break;
     }
-    return messageIEs[modules[0]];
+    return JSON.parse(JSON.stringify(messageIEs[modules[0]]));
 }
 
 function integerHelper(asn1Json) {
