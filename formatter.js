@@ -1,5 +1,5 @@
 var fs = require('fs');
-var readline = require('readline');
+var path = require('path');
 var xlsx = require('xlsx');
 var parser = require('3gpp-asn1-parser');
 
@@ -10,13 +10,37 @@ var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
                 'BIT', 'OCTET' /* HACK */];
 
 function format(messageIEname, asn1Json) {
-    let messageIE = getUniqueMessageIE(parser.getAsn1ByName(messageIEname,
-                                                            asn1Json));
+    let worksheets = [];
+    if (messageIEname == '__all') {
+        let idx = 0;
+        for (let moduleName in asn1Json) {
+            for (let definition in asn1Json[moduleName]) {
+                let messageIE = JSON.parse(JSON.stringify(
+                                            asn1Json[moduleName][definition]));
+                messageIEHelper(messageIE, definition);
+                let depthMax = expand(messageIE, asn1Json);
+                // logJson(messageIE);
+                let idxString = String(idx);
+                worksheets.push(toWorksheet(
+                    `${definition.substring(0, 30 - (idxString.length + 1))} ${idxString}`,
+                    messageIE, depthMax));
+                idx++;
+            }
+        }
+    } else {
+        let messageIE = getUniqueMessageIE(parser.getAsn1ByName(messageIEname,
+                                                                asn1Json));
+        messageIEHelper(messageIE, messageIEname);
+        let depthMax = expand(messageIE, asn1Json);
+        // logJson(messageIE);
+        worksheets.push(toWorksheet(messageIEname, messageIE, depthMax));
+    }
+    return toWorkbook(worksheets);
+}
+
+function messageIEHelper(messageIE, messageIEname) {
     messageIE['name'] = messageIEname;
     delete messageIE['inventory'];
-    let depthMax = expand(messageIE, asn1Json);
-    // logJson(messageIE);
-    return toWorkbook(messageIEname, messageIE, depthMax);
 }
 
 function expand(messageIE, asn1Json, depth = 0) {
@@ -121,8 +145,7 @@ function expand(messageIE, asn1Json, depth = 0) {
     return depthMax;
 }
 
-function toWorkbook(messageIEname, messageIE, depthMax) {
-    let workbook = xlsx.utils.book_new();
+function toWorksheet(sheetname, messageIE, depthMax) {
     let worksheet_data = [];
     let header = [];
     header.push('IE');
@@ -133,8 +156,17 @@ function toWorkbook(messageIEname, messageIE, depthMax) {
     worksheet_data.push(header);
     preorderHelper(worksheet_data, messageIE, depthMax);
     let worksheet = xlsx.utils.aoa_to_sheet(worksheet_data);
-    let sheetname = messageIEname.substring(0, 30);
-    xlsx.utils.book_append_sheet(workbook, worksheet, sheetname);
+    sheetname = sheetname.substring(0, 30);
+    return {sheetname: sheetname, worksheet: worksheet};
+}
+
+function toWorkbook(worksheets) {
+    let workbook = xlsx.utils.book_new();
+    for (let worksheet of worksheets) {
+        xlsx.utils.book_append_sheet(workbook,
+                                        worksheet['worksheet'],
+                                        worksheet['sheetname']);
+    }
     return workbook;
 }
 
@@ -256,10 +288,18 @@ function getSizeExpression(asn1Json) {
 
 if (require.main == module) {
     if (process.argv.length >= 4) {
-        let input = fs.readFileSync(process.argv[2], 'utf8');
+        let inputFile = path.parse(process.argv[2]);
+        let input = fs.readFileSync(path.resolve(__dirname, inputFile['dir'],
+                                                    inputFile['base']), 'utf8');
         let messageIEname = process.argv[3];
         let asn1Json = parser.parse(input);
-        xlsx.writeFile(format(messageIEname, asn1Json), `${messageIEname}.xlsx`);
+        let outputFile;
+        if (messageIEname == '__all') {
+            outputFile = `${inputFile['name']}.xlsx`;
+        } else {
+            outputFile = `${messageIEname}.xlsx`;
+        }
+        xlsx.writeFile(format(messageIEname, asn1Json), outputFile);
     } else {
         console.log('Usage: node formatter <file_name> <message/IE>');
         console.log('  ex : node formatter 38331-f10.asn1 RRCReconfiguration');
