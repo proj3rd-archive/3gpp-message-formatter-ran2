@@ -90,15 +90,17 @@ function expand(messageIE, asn1Json, depth = 0) {
                         }
                         messageIE['parameters'] = [];
                     } else {
-                        messageIE['subIE'] = messageIE['type'];
-                        let type = getUniqueMessageIE(parser.getAsn1ByName(
-                                                        messageIE['type'], asn1Json));
-                        delete type['inventory'];
-                        Object.assign(messageIE, type);
-                        if ('content' in messageIE) {
-                            // messageIE['content'][0]['name'] = messageIE['subIE'];
+                        if (!messageIE['isParameter']) {
+                            messageIE['subIE'] = messageIE['type'];
+                            let type = getUniqueMessageIE(parser.getAsn1ByName(
+                                                            messageIE['type'], asn1Json));
+                            delete type['inventory'];
+                            Object.assign(messageIE, type);
+                            if ('content' in messageIE) {
+                                // messageIE['content'][0]['name'] = messageIE['subIE'];
+                            }
+                            depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth));
                         }
-                        depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth));
                     }
                 }
                 if ('content' in messageIE) {
