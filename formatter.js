@@ -15,6 +15,9 @@ function format(messageIEname, asn1Json) {
         let idx = 0;
         for (let moduleName in asn1Json) {
             for (let definition in asn1Json[moduleName]) {
+                if (definition == 'import') {
+                    continue;
+                }
                 let messageIE = JSON.parse(JSON.stringify(
                                             asn1Json[moduleName][definition]));
                 messageIEHelper(messageIE, definition);
