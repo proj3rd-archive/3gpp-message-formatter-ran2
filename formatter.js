@@ -1,6 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var xlsx = require('xlsx');
+var extract = require('3gpp-asn1-extractor');
 var parser = require('3gpp-asn1-parser');
 
 module.exports = exports = format;
@@ -292,8 +293,10 @@ function getSizeExpression(asn1Json) {
 if (require.main == module) {
     if (process.argv.length >= 4) {
         let inputFile = path.parse(process.argv[2]);
-        let input = fs.readFileSync(path.resolve(process.cwd(), inputFile['dir'],
-                                                    inputFile['base']), 'utf8');
+        let input = extract(fs.readFileSync(path.resolve(process.cwd(),
+                                                            inputFile['dir'],
+                                                            inputFile['base']),
+                                            'utf8'));
         let messageIEname = process.argv[3];
         let asn1Json = parser.parse(input);
         let outputFile;
