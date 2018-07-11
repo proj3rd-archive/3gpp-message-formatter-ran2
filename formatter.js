@@ -22,6 +22,9 @@ function format(messageIEname, asn1Json) {
                 let messageIE = JSON.parse(JSON.stringify(
                                             asn1Json[moduleName][definition]));
                 messageIEHelper(messageIE, definition);
+                if (messageIE['type'] == 'INTEGER') {
+                    continue;
+                }
                 let depthMax = expand(messageIE, asn1Json);
                 // logJson(messageIE);
                 let idxString = String(idx);
@@ -48,6 +51,9 @@ function messageIEHelper(messageIE, messageIEname) {
 }
 
 function expand(messageIE, asn1Json, depth = 0) {
+    if (!('constants' in messageIE)) {
+        messageIE['constants'] = {};
+    }
     let depthMax = depth;
     if ('type' in messageIE) {
         switch (messageIE['type']) {
@@ -55,7 +61,7 @@ function expand(messageIE, asn1Json, depth = 0) {
             case 'NULL':
                 break;
             case 'BIT STRING':
-                messageIE['type'] += ` ${getSizeExpression(messageIE)}`;
+                messageIE['type'] += ` ${getSizeExpression(messageIE, asn1Json)}`;
                 delete messageIE['size'];
                 delete messageIE['sizeMin'];
                 delete messageIE['sizeMax'];
@@ -65,7 +71,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                 delete messageIE['content'];
                 break;
             case 'INTEGER':
-                messageIE['type'] += ` ${integerHelper(messageIE)}`;
+                messageIE['type'] += ` ${integerHelper(messageIE, asn1Json)}`;
                 delete messageIE['value'];
                 delete messageIE['start'];
                 delete messageIE['end'];
@@ -82,12 +88,13 @@ function expand(messageIE, asn1Json, depth = 0) {
                     messageIE['content'][0]['name'] = containedName;
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
+                        mergeConstatns(messageIE, item);
                     }
                 }
                 break;
             case 'SEQUENCE OF':
                 let memberName = messageIE['member']['type'];
-                messageIE['type'] = `SEQUENCE ${getSizeExpression(messageIE)} OF ${messageIE['member']['type']} ${integerHelper(messageIE['member'])}`;
+                messageIE['type'] = `SEQUENCE ${getSizeExpression(messageIE, asn1Json)} OF ${messageIE['member']['type']} ${integerHelper(messageIE['member'], asn1Json)}`;
                 delete messageIE['member'];
                 delete messageIE['size'];
                 delete messageIE['sizeMin'];
@@ -100,6 +107,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     messageIE['content'][0]['name'] = memberName;
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
+                        mergeConstatns(messageIE, item);
                     }
                 }
                 break;
@@ -107,6 +115,7 @@ function expand(messageIE, asn1Json, depth = 0) {
             case 'SEQUENCE':
                 for (let item of messageIE['content'] ) {
                     depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
+                    mergeConstatns(messageIE, item);
                 }
                 break;
             default:
@@ -134,6 +143,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                 if ('content' in messageIE) {
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
+                        mergeConstatns(messageIE, item);
                     }
                 }
                 break;
@@ -149,6 +159,13 @@ function expand(messageIE, asn1Json, depth = 0) {
     return depthMax;
 }
 
+function mergeConstatns(parentIE, childIE) {
+    for (let key in childIE['constants']) {
+        parentIE['constants'][key] = childIE['constants'][key];
+    }
+    delete childIE['constants'];
+}
+
 function toWorksheet(sheetname, messageIE, depthMax) {
     let worksheet_data = [];
     let header = [];
@@ -159,6 +176,17 @@ function toWorksheet(sheetname, messageIE, depthMax) {
     header.push('M/O/C', 'Need code/Condition', 'Sub IE', 'Type/Description', 'DEFAULT');
     worksheet_data.push(header);
     preorderHelper(worksheet_data, messageIE, depthMax);
+    if (Object.keys(messageIE['constants']).length) {
+        worksheet_data.push([null]);
+    }
+    worksheet_data.push(['Constants']);
+    for (let key in messageIE['constants']) {
+        let row = [key, messageIE['constants'][key]['value']];
+        for (let i = 0; i < depthMax; i++) {
+            row.splice(1, 0, null);
+        }
+        worksheet_data.push(row);
+    }
     let worksheet = xlsx.utils.aoa_to_sheet(worksheet_data);
     sheetname = sheetname.substring(0, 30);
     return {sheetname: sheetname, worksheet: worksheet};
@@ -262,28 +290,52 @@ Please report an issue with the message/IE name and specification`;
     return JSON.parse(JSON.stringify(messageIEs[modules[0]]));
 }
 
-function integerHelper(asn1Json) {
+function integerHelper(messageIE, asn1Json) {
     let ret = '';
-    if ('value' in asn1Json || 'start' in asn1Json) {
+    if ('value' in messageIE || 'start' in messageIE) {
         ret += '(';
-        if ('value' in asn1Json) {
-            ret += asn1Json['value'];
-        } else if ('start' in asn1Json) {
-            ret += `${asn1Json['start']}..${asn1Json['end']}`;
+        if ('value' in messageIE) {
+            let value = messageIE['value'];
+            if (Number(value) != value) {
+                messageIE['constants'][value] = getUniqueMessageIE(parser.getAsn1ByName(value, asn1Json));
+            }
+            ret += value;
+        } else if ('start' in messageIE) {
+            let start = messageIE['start'];
+            let end = messageIE['end'];
+            if (Number(start) != start) {
+                messageIE['constants'][start] = getUniqueMessageIE(parser.getAsn1ByName(start, asn1Json));
+            }
+            if (Number(end) != end) {
+                messageIE['constants'][end] = getUniqueMessageIE(parser.getAsn1ByName(end, asn1Json));
+            }
+            ret += `${start}..${end}`;
         }
         ret += ')';
     }
     return ret;
 }
 
-function getSizeExpression(asn1Json) {
+function getSizeExpression(messageIE, asn1Json) {
     let ret = '';
-    if ('size' in asn1Json || 'sizeMin' in asn1Json) {
+    if ('size' in messageIE || 'sizeMin' in messageIE) {
         ret = '(SIZE(';
-        if ('size' in asn1Json) {
-            ret += asn1Json['size'];
-        } else if ('sizeMin' in asn1Json) {
-            ret += `${asn1Json['sizeMin']}..${asn1Json['sizeMax']}`;
+        if ('size' in messageIE) {
+            let size = messageIE['size'];
+            if (Number(size) != size) {
+                messageIE['constants'][size] = getUniqueMessageIE(parser.getAsn1ByName(size, asn1Json));
+            }
+            ret += size;
+        } else if ('sizeMin' in messageIE) {
+            let sizeMin = messageIE['sizeMin'];
+            let sizeMax = messageIE['sizeMax'];
+            if (Number(sizeMin) != sizeMin) {
+                messageIE['constants'][sizeMin] = getUniqueMessageIE(parser.getAsn1ByName(sizeMin, asn1Json));
+            }
+            if (Number(sizeMax) != sizeMax) {
+                messageIE['constants'][sizeMax] = getUniqueMessageIE(parser.getAsn1ByName(sizeMax, asn1Json));
+            }
+            ret += `${sizeMin}..${sizeMax}`;
         }
         ret += '))';
     }
