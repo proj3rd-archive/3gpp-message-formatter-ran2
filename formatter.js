@@ -292,7 +292,7 @@ function getSizeExpression(asn1Json) {
 if (require.main == module) {
     if (process.argv.length >= 4) {
         let inputFile = path.parse(process.argv[2]);
-        let input = fs.readFileSync(path.resolve(__dirname, inputFile['dir'],
+        let input = fs.readFileSync(path.resolve(process.cwd(), inputFile['dir'],
                                                     inputFile['base']), 'utf8');
         let messageIEname = process.argv[3];
         let asn1Json = parser.parse(input);
