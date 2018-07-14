@@ -88,7 +88,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     messageIE['content'][0]['name'] = containedName;
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
-                        mergeConstatns(messageIE, item);
+                        mergeConstants(messageIE, item);
                     }
                 }
                 break;
@@ -107,7 +107,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     messageIE['content'][0]['name'] = memberName;
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
-                        mergeConstatns(messageIE, item);
+                        mergeConstants(messageIE, item);
                     }
                 }
                 break;
@@ -115,7 +115,7 @@ function expand(messageIE, asn1Json, depth = 0) {
             case 'SEQUENCE':
                 for (let item of messageIE['content'] ) {
                     depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
-                    mergeConstatns(messageIE, item);
+                    mergeConstants(messageIE, item);
                 }
                 break;
             default:
@@ -143,7 +143,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                 if ('content' in messageIE) {
                     for (let item of messageIE['content']) {
                         depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
-                        mergeConstatns(messageIE, item);
+                        mergeConstants(messageIE, item);
                     }
                 }
                 break;
@@ -159,7 +159,7 @@ function expand(messageIE, asn1Json, depth = 0) {
     return depthMax;
 }
 
-function mergeConstatns(parentIE, childIE) {
+function mergeConstants(parentIE, childIE) {
     for (let key in childIE['constants']) {
         parentIE['constants'][key] = childIE['constants'][key];
     }
