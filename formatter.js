@@ -188,6 +188,10 @@ function toWorksheet(sheetname, messageIE, depthMax) {
         worksheet_data.push(row);
     }
     let worksheet = xlsx.utils.aoa_to_sheet(worksheet_data);
+    worksheet['!cols'] = [];
+    for (let i = 0; i < depthMax - 1; i++) {
+        worksheet['!cols'].push({wch: 3});
+    }
     sheetname = sheetname.substring(0, 30);
     return {sheetname: sheetname, worksheet: worksheet};
 }
