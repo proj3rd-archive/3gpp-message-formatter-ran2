@@ -51,6 +51,7 @@ function messageIEHelper(messageIE, messageIEname) {
 }
 
 function expand(messageIE, asn1Json, depth = 0) {
+    // TODO: more elegant way?
     if (!('constants' in messageIE)) {
         messageIE['constants'] = {};
     }
@@ -178,14 +179,14 @@ function toWorksheet(sheetname, messageIE, depthMax) {
     preorderHelper(worksheet_data, messageIE, depthMax);
     if (Object.keys(messageIE['constants']).length) {
         worksheet_data.push([null]);
-    }
-    worksheet_data.push(['Constants']);
-    for (let key in messageIE['constants']) {
-        let row = [key, messageIE['constants'][key]['value']];
-        for (let i = 0; i < depthMax; i++) {
-            row.splice(1, 0, null);
+        worksheet_data.push(['Constants']);
+        for (let key in messageIE['constants']) {
+            let row = [key, messageIE['constants'][key]['value']];
+            for (let i = 0; i < depthMax; i++) {
+                row.splice(1, 0, null);
+            }
+            worksheet_data.push(row);
         }
-        worksheet_data.push(row);
     }
     let worksheet = xlsx.utils.aoa_to_sheet(worksheet_data);
     worksheet['!cols'] = [];
@@ -291,11 +292,16 @@ Honestly, I didn't expect this.
 Please report an issue with the message/IE name and specification`;
             break;
     }
-    return JSON.parse(JSON.stringify(messageIEs[modules[0]]));
+    return Object.assign(JSON.parse(JSON.stringify(messageIEs[modules[0]])),
+                            {'module': modules[0], 'constants': {}});
 }
 
 function integerHelper(messageIE, asn1Json) {
     let ret = '';
+    // TODO: more elegant way?
+    if (!('constants' in messageIE)) {
+        messageIE['constants'] = {};
+    }
     if ('value' in messageIE || 'start' in messageIE) {
         ret += '(';
         if ('value' in messageIE) {
@@ -322,6 +328,10 @@ function integerHelper(messageIE, asn1Json) {
 
 function getSizeExpression(messageIE, asn1Json) {
     let ret = '';
+    // TODO: more elegant way?
+    if (!('constants' in messageIE)) {
+        messageIE['constants'] = {};
+    }
     if ('size' in messageIE || 'sizeMin' in messageIE) {
         ret = '(SIZE(';
         if ('size' in messageIE) {
