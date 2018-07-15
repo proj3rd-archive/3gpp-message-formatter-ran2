@@ -1,8 +1,8 @@
 var fs = require('fs');
 var path = require('path');
 var xlsx = require('xlsx');
-var extract = require('3gpp-asn1-extractor');
-var parser = require('3gpp-asn1-parser');
+var extract = require('third-gen-asn1-extractor');
+var parser = require('third-gen-asn1-parser');
 
 module.exports = exports = format;
 
