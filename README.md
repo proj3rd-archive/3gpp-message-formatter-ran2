@@ -2,6 +2,12 @@
 
 It formats RRC messages/IEs into tables
 
+## Installation
+
+```sh
+npm i third-gen-message-formatter-ran2
+```
+
 ## Dependencies
 
 ```sh
