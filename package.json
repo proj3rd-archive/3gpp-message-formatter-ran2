@@ -1,5 +1,7 @@
 {
-  "name": "3gpp-message-formatter-ran2",
+  "name": "third-gen-message-formatter-ran2",
+  "version": "1.0.0",
+  "license": "GPL-3.0",
   "main": "formatter.js",
   "scripts": {
     "pkg-win": "npm run pkg-win-x64 && npm run pkg-win-x86",
