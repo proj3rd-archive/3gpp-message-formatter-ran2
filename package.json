@@ -1,9 +1,6 @@
 {
   "name": "3gpp-message-formatter-ran2",
   "main": "formatter.js",
-  "dependencies": {
-    "xlsx": "^0.13.0"
-  },
   "scripts": {
     "pkg-win": "npm run pkg-win-x64 && npm run pkg-win-x86",
     "pkg-win-x64": "pkg formatter.js -t node6-win-x64 -o formatter-x64.exe",

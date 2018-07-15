@@ -169,14 +169,22 @@ function mergeConstants(parentIE, childIE) {
 
 function toWorksheet(sheetname, messageIE, depthMax) {
     let worksheet_data = [];
+    let styles = {};
+    let rowNum = 1;
     let header = [];
     header.push('IE');
+    styles[cellAddress(rowNum, 1)] = 3;
     for (let i = 0; i < depthMax; i++) {
         header.push(null);
+        styles[cellAddress(rowNum, 2)] = 1;
     }
     header.push('M/O/C', 'Need code/Condition', 'Sub IE', 'Type/Description', 'DEFAULT');
+    for (let i = 0; i < header.length; i++) {
+        styles[cellAddress(rowNum, depthMax + i + 1)] = 1;
+    }
     worksheet_data.push(header);
-    preorderHelper(worksheet_data, messageIE, depthMax);
+    rowNum++;
+    preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax);
     if (Object.keys(messageIE['constants']).length) {
         worksheet_data.push([null]);
         worksheet_data.push(['Constants']);
@@ -193,12 +201,37 @@ function toWorksheet(sheetname, messageIE, depthMax) {
     for (let i = 0; i < depthMax - 1; i++) {
         worksheet['!cols'].push({wch: 3});
     }
+    for (let cell in styles) {
+        if (!(cell in worksheet)) {
+            worksheet[cell] = {};
+        }
+        worksheet[cell]['s'] = styles[cell];
+    }
     sheetname = sheetname.substring(0, 30);
     return {sheetname: sheetname, worksheet: worksheet};
 }
 
 function toWorkbook(worksheets) {
     let workbook = xlsx.utils.book_new();
+    workbook['Styles'] = {};
+    let style = workbook['Styles'];
+    style['Borders'] = [{}];
+    let borders = workbook['Styles']['Borders'];
+    borders.push({top: {style: "thin"}});
+    borders.push({left: {style: "thin"}});
+    borders.push({top: {style: "thin"}, left: {style: "thin"}});
+    style['CellXf'] = [{numFmtId: 0, fontId: 0, fillId: 0, borderId: 0,
+                        xfId: 0}];
+    let cellXf = style['CellXf'];
+    // 1: Top
+    cellXf.push({numFmtId: 0, fontId: 0, fillId: 0, borderId: 1, xfId: 0,
+                    applyBorder: true});
+    // 2: Left
+    cellXf.push({numFmtId: 0, fontId: 0, fillId: 0, borderId: 2, xfId: 0,
+                    applyBorder: true});
+    // 3: Top Left
+    cellXf.push({numFmtId: 0, fontId: 0, fillId: 0, borderId: 3, xfId: 0,
+                    applyBorder: true});
     for (let worksheet of worksheets) {
         xlsx.utils.book_append_sheet(workbook,
                                         worksheet['worksheet'],
@@ -207,30 +240,44 @@ function toWorkbook(worksheets) {
     return workbook;
 }
 
-function preorderHelper(worksheet_data, messageIE, depthMax, depth = 0,
-                        isChoicable = false) {
+function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
+                        depth = 0, isChoicable = false) {
     if (!Object.keys(messageIE).length) {
-        return;
+        return rowNum;
     }
     if ('extensionAdditionGroup' in messageIE) {
         worksheet_data.push(['[[']);
+        styles[cellAddress(rowNum, 1)] = 3;
+        rowNum++;
         for (let item of messageIE['extensionAdditionGroup']) {
-            preorderHelper(worksheet_data, item, depthMax, depth);
+            rowNum = preorderHelper(worksheet_data, item, styles, rowNum,
+                                    depthMax, depth);
         }
         worksheet_data.push([']]']);
+        styles[cellAddress(rowNum, 1)] = 3;
+        rowNum++;
     } else {
         let row = [];
+        let k = 0;
         for (let i = 0; i < depth; i++) {
             row.push(null);
+            styles[cellAddress(rowNum, i + 1)] = 2;
+            k = i;
         }
+        k++;
         // name
         if ('name' in messageIE) {
             row.push(messageIE['name']);
+            styles[cellAddress(rowNum, k + 1)] = 3;
         } else {
             row.push(null);
+            styles[cellAddress(rowNum, k + 1)] = 2;
         }
+        k++;
         for (let i = depth; i < depthMax; i++) {
             row.push(null);
+            styles[cellAddress(rowNum, k + 1)] = 1;
+            k++;
         }
         // Optional, Conditional, Mandatory
         if ('optional' in messageIE) {
@@ -240,6 +287,8 @@ function preorderHelper(worksheet_data, messageIE, depthMax, depth = 0,
         } else {
             row.push('M');
         }
+        styles[cellAddress(rowNum, k + 1)] = 1;
+        k++;
         // Choice
         isChoicable = false;
         if (messageIE['type'] == 'CHOICE') {
@@ -253,29 +302,39 @@ function preorderHelper(worksheet_data, messageIE, depthMax, depth = 0,
         } else {
             row.push(null);
         }
+        styles[cellAddress(rowNum, k + 1)] = 1;
+        k++;
         // Custom IE name
         if ('subIE' in messageIE) {
             row.push(messageIE['subIE']);
         } else {
             row.push(null);
         }
+        styles[cellAddress(rowNum, k + 1)] = 1;
+        k++;
         // Actual type
         if ('type' in messageIE) {
             row.push(messageIE['type']);
         } else {
             row.push(null);
         }
+        styles[cellAddress(rowNum, k + 1)] = 1;
+        k++;
         if ('default' in messageIE) {
             row.push(messageIE['default']);
         }
+        styles[cellAddress(rowNum, k + 1)] = 1;
+        k++;
         worksheet_data.push(row);
+        rowNum++;
         if ('content' in messageIE) {
             for (let item of messageIE['content']) {
-                preorderHelper(worksheet_data, item, depthMax, depth + 1,
-                                isChoicable);
+                rowNum = preorderHelper(worksheet_data, item, styles, rowNum,
+                                        depthMax, depth + 1, isChoicable);
             }
         }
     }
+    return rowNum;
 }
 
 function getUniqueMessageIE(messageIEs) {
@@ -354,6 +413,22 @@ function getSizeExpression(messageIE, asn1Json) {
         ret += '))';
     }
     return ret;
+}
+
+function cellAddress(r, c) {
+    let address = base26(c) + r;
+    return address;
+}
+
+// 1: A, 2: B, ..., 27: AA
+function base26(num) {
+    var c = [];
+    while (num) {
+        let r = num % 26;
+        c.splice(0, 0, String.fromCharCode('A'.charCodeAt(0) + r - 1));
+        num = (num - r) / 26;
+    }
+    return c.join('');
 }
 
 if (require.main == module) {
