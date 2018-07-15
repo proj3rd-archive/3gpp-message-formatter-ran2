@@ -1,5 +1,6 @@
 var fs = require('fs');
 var path = require('path');
+var readline = require('readline-sync');
 var xlsx = require('xlsx');
 var extract = require('third-gen-asn1-extractor');
 var parser = require('third-gen-asn1-parser');
@@ -25,6 +26,7 @@ function format(messageIEname, asn1Json) {
                 if (messageIE['type'] == 'INTEGER') {
                     continue;
                 }
+                console.log(`Formatting ${moduleName}/${definition}...`);
                 let depthMax = expand(messageIE, asn1Json);
                 // logJson(messageIE);
                 let idxString = String(idx);
@@ -35,9 +37,9 @@ function format(messageIEname, asn1Json) {
             }
         }
     } else {
-        let messageIE = getUniqueMessageIE(parser.getAsn1ByName(messageIEname,
-                                                                asn1Json));
+        let messageIE = getUniqueMessageIE(messageIEname, asn1Json);
         messageIEHelper(messageIE, messageIEname);
+        console.log(`Formatting ${messageIE['module']}/${messageIEname}...`);
         let depthMax = expand(messageIE, asn1Json);
         // logJson(messageIE);
         worksheets.push(toWorksheet(messageIEname, messageIE, depthMax));
@@ -82,8 +84,8 @@ function expand(messageIE, asn1Json, depth = 0) {
                     let containedName = messageIE['containing'];
                     delete messageIE['containing'];
                     messageIE['type'] += ` (CONTAINING ${containedName})`;
-                    let containedIE = getUniqueMessageIE(parser.getAsn1ByName(
-                                                    containedName, asn1Json));
+                    let containedIE = getUniqueMessageIE(containedName,
+                                                            asn1Json);
                     delete containedIE['inventory'];
                     messageIE['content'] = [containedIE];
                     messageIE['content'][0]['name'] = containedName;
@@ -101,8 +103,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                 delete messageIE['sizeMin'];
                 delete messageIE['sizeMax'];
                 if (!builtIns.includes(memberName)) {
-                    let memberIE = getUniqueMessageIE(parser.getAsn1ByName(
-                                                            memberName, asn1Json));
+                    let memberIE = getUniqueMessageIE(memberName, asn1Json);
                     delete memberIE['inventory'];
                     messageIE['content'] = [memberIE];
                     messageIE['content'][0]['name'] = memberName;
@@ -130,8 +131,8 @@ function expand(messageIE, asn1Json, depth = 0) {
                     } else {
                         if (!messageIE['isParameter']) {
                             messageIE['subIE'] = messageIE['type'];
-                            let type = getUniqueMessageIE(parser.getAsn1ByName(
-                                                            messageIE['type'], asn1Json));
+                            let type = getUniqueMessageIE(messageIE['type'],
+                                                            asn1Json);
                             delete type['inventory'];
                             Object.assign(messageIE, type);
                             if ('content' in messageIE) {
@@ -336,8 +337,10 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
     return rowNum;
 }
 
-function getUniqueMessageIE(messageIEs) {
+function getUniqueMessageIE(messageIEname, asn1Json) {
+    let messageIEs = parser.getAsn1ByName(messageIEname, asn1Json);
     let modules = Object.keys(messageIEs);
+    let idx = 0;
     switch (modules.length) {
         case 0:
             throw `No message/IE found`;
@@ -345,13 +348,15 @@ function getUniqueMessageIE(messageIEs) {
         case 1:
             break;
         default:
-            throw `Multiple ASN.1 modules have definitions with the same name.
-Honestly, I didn't expect this.
-Please report an issue with the message/IE name and specification`;
+            console.log(`'${messageIEname}' is defined in multiple modules.`);
+            for (let i = 0; i < modules.length; i++) {
+                console.log(`${i}: ${modules[i]}`);
+            }
+            let idx = readline.questionInt('Which one? ');
             break;
     }
-    return Object.assign(JSON.parse(JSON.stringify(messageIEs[modules[0]])),
-                            {'module': modules[0], 'constants': {}});
+    return Object.assign(JSON.parse(JSON.stringify(messageIEs[modules[idx]])),
+                            {'module': modules[idx], 'constants': {}});
 }
 
 function integerHelper(messageIE, asn1Json) {
@@ -365,17 +370,20 @@ function integerHelper(messageIE, asn1Json) {
         if ('value' in messageIE) {
             let value = messageIE['value'];
             if (Number(value) != value) {
-                messageIE['constants'][value] = getUniqueMessageIE(parser.getAsn1ByName(value, asn1Json));
+                messageIE['constants'][value] = getUniqueMessageIE(value,
+                                                                    asn1Json);
             }
             ret += value;
         } else if ('start' in messageIE) {
             let start = messageIE['start'];
             let end = messageIE['end'];
             if (Number(start) != start) {
-                messageIE['constants'][start] = getUniqueMessageIE(parser.getAsn1ByName(start, asn1Json));
+                messageIE['constants'][start] = getUniqueMessageIE(start,
+                                                                    asn1Json);
             }
             if (Number(end) != end) {
-                messageIE['constants'][end] = getUniqueMessageIE(parser.getAsn1ByName(end, asn1Json));
+                messageIE['constants'][end] = getUniqueMessageIE(end,
+                                                                    asn1Json);
             }
             ret += `${start}..${end}`;
         }
@@ -395,17 +403,20 @@ function getSizeExpression(messageIE, asn1Json) {
         if ('size' in messageIE) {
             let size = messageIE['size'];
             if (Number(size) != size) {
-                messageIE['constants'][size] = getUniqueMessageIE(parser.getAsn1ByName(size, asn1Json));
+                messageIE['constants'][size] = getUniqueMessageIE(size,
+                                                                    asn1Json);
             }
             ret += size;
         } else if ('sizeMin' in messageIE) {
             let sizeMin = messageIE['sizeMin'];
             let sizeMax = messageIE['sizeMax'];
             if (Number(sizeMin) != sizeMin) {
-                messageIE['constants'][sizeMin] = getUniqueMessageIE(parser.getAsn1ByName(sizeMin, asn1Json));
+                messageIE['constants'][sizeMin] = getUniqueMessageIE(sizeMin,
+                                                                     asn1Json);
             }
             if (Number(sizeMax) != sizeMax) {
-                messageIE['constants'][sizeMax] = getUniqueMessageIE(parser.getAsn1ByName(sizeMax, asn1Json));
+                messageIE['constants'][sizeMax] = getUniqueMessageIE(sizeMax,
+                                                                     asn1Json);
             }
             ret += `${sizeMin}..${sizeMax}`;
         }

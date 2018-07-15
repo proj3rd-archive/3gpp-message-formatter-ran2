@@ -1,6 +1,6 @@
 {
   "name": "third-gen-message-formatter-ran2",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "GPL-3.0",
   "main": "formatter.js",
   "scripts": {
@@ -9,6 +9,7 @@
     "pkg-win-x86": "pkg formatter.js -t node6-win-x86 -o formatter-x86.exe"
   },
   "dependencies": {
+    "readline-sync": "^1.4.9",
     "third-gen-asn1-parser": "^1.0.1"
   }
 }
