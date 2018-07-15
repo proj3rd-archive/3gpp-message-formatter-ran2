@@ -1,7 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var readline = require('readline-sync');
-var xlsx = require('xlsx');
+var xlsx = require('@gsongsong/xlsx');
 var extract = require('third-gen-asn1-extractor');
 var parser = require('third-gen-asn1-parser');
 
