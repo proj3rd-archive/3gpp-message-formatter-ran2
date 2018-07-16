@@ -11,10 +11,7 @@ npm i third-gen-message-formatter-ran2
 ## Dependencies
 
 ```sh
-npm install xlsx
-git clone https://github.com/gsongsong/3gpp-asn1-parser
-npm link 3gpp-asn1-extractor
-npm link 3gpp-asn1-parser
+npm install third-gen-asn1-extractor third-gen-asn1-parser @gsongsong/xlsx
 ```
 
 ## Usage
@@ -29,6 +26,3 @@ node formatter resources/38331-f10.txt RRCReconfiguration
 
 TBA
 
-### Module
-
-TBA
