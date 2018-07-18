@@ -124,8 +124,24 @@ function expand(messageIE, asn1Json, depth = 0) {
                 if (!builtIns.includes(messageIE['type'].split(' ')[0])) {
                     if ('parameters' in messageIE) {
                         if (messageIE['parameters'].length) {
-                            messageIE['type'] += ` {${messageIE['parameters']
+                            console.log('Original');
+                            console.log(JSON.stringify(messageIE, null, 2));
+                            console.log('');
+                            let type = getUniqueMessageIE(messageIE['type'],
+                                                            asn1Json);
+                            let arguments = messageIE['parameters'];
+                            console.log(messageIE['type']);
+                            console.log(JSON.stringify(type, null, 2));
+                            console.log('');
+                            substituteArguments(type, messageIE['param']);
+                            messageIE['subIE'] = `${messageIE['type']} {${messageIE['parameters']
                                                                 .join(', ')}}`;
+                            Object.assign(messageIE, type);
+                            // depthMax = Math.max(depthMax, expand(item, asn1Json, depth)); // TODO
+                            console.log('Modified');
+                            console.log(JSON.stringify(messageIE, null, 2));
+                            console.log('');
+                            console.log('');
                         }
                         messageIE['parameters'] = [];
                     } else {
@@ -159,6 +175,12 @@ function expand(messageIE, asn1Json, depth = 0) {
         }
     }
     return depthMax;
+}
+
+function substituteArguments(messageIE, arguments) {
+    // TODO
+    delete messageIE['parameterisedType'];
+    delete messageIE['parameters'];
 }
 
 function mergeConstants(parentIE, childIE) {
