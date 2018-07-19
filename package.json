@@ -1,6 +1,6 @@
 {
   "name": "third-gen-message-formatter-ran2",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "GPL-3.0",
   "main": "formatter.js",
   "scripts": {
@@ -12,6 +12,6 @@
     "@gsongsong/xlsx": "^0.13.2",
     "readline-sync": "^1.4.9",
     "third-gen-asn1-extractor": "^1.0.1",
-    "third-gen-asn1-parser": "^1.0.1"
+    "third-gen-asn1-parser": "^1.0.2"
   }
 }
