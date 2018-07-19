@@ -124,24 +124,13 @@ function expand(messageIE, asn1Json, depth = 0) {
                 if (!builtIns.includes(messageIE['type'].split(' ')[0])) {
                     if ('parameters' in messageIE) {
                         if (messageIE['parameters'].length) {
-                            console.log('Original');
-                            console.log(JSON.stringify(messageIE, null, 2));
-                            console.log('');
                             let type = getUniqueMessageIE(messageIE['type'],
                                                             asn1Json);
-                            let arguments = messageIE['parameters'];
-                            console.log(messageIE['type']);
-                            console.log(JSON.stringify(type, null, 2));
-                            console.log('');
-                            substituteArguments(type, messageIE['param']);
+                            substituteArguments(type, type['parameters'], messageIE['parameters']);
                             messageIE['subIE'] = `${messageIE['type']} {${messageIE['parameters']
                                                                 .join(', ')}}`;
                             Object.assign(messageIE, type);
-                            // depthMax = Math.max(depthMax, expand(item, asn1Json, depth)); // TODO
-                            console.log('Modified');
-                            console.log(JSON.stringify(messageIE, null, 2));
-                            console.log('');
-                            console.log('');
+                            depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth));
                         }
                         messageIE['parameters'] = [];
                     } else {
@@ -177,10 +166,37 @@ function expand(messageIE, asn1Json, depth = 0) {
     return depthMax;
 }
 
-function substituteArguments(messageIE, arguments) {
-    // TODO
-    delete messageIE['parameterisedType'];
+function substituteArguments(messageIE, params, args) {
     delete messageIE['parameters'];
+    delete messageIE['parameterisedType'];
+    if (messageIE instanceof Array) {
+        for (let i = 0; i < messageIE.length; i++) {
+            let elem = messageIE[i];
+            if (typeof elem == 'string') {
+                let idx = params.indexOf(elem);
+                if (idx == -1) {
+                    continue;
+                }
+                messageIE[i] = args[idx];
+            } else {
+                substituteArguments(messageIE[i], params, args);
+            }
+        }
+    } else {
+        for (let key in messageIE) {
+            let value = messageIE[key];
+            if (typeof value == 'string') {
+                let idx = params.indexOf(value);
+                if (idx == -1) {
+                    continue;
+                }
+                messageIE[key] = args[idx];
+                delete messageIE['isParameter'];
+            } else {
+                substituteArguments(messageIE[key], params, args);
+            }
+        }
+    }
 }
 
 function mergeConstants(parentIE, childIE) {
