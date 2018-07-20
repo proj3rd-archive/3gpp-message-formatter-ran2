@@ -1,6 +1,6 @@
 # 3GPP Message Formatter for RAN2
 
-It formats RRC messages/IEs into tables
+It generates an Excel sheet for each 3GPP RRC (36.331, 38.331) message/IE
 
 ## Installation
 
@@ -8,10 +8,12 @@ It formats RRC messages/IEs into tables
 npm i third-gen-message-formatter-ran2
 ```
 
-## Dependencies
+### Dependencies
+
+If above does not install dependencies:
 
 ```sh
-npm install third-gen-asn1-extractor third-gen-asn1-parser @gsongsong/xlsx
+npm i cellref readline-sync third-gen-asn1-extractor third-gen-asn1-parser @gsongsong/xlsx
 ```
 
 ## Usage
@@ -19,10 +21,10 @@ npm install third-gen-asn1-extractor third-gen-asn1-parser @gsongsong/xlsx
 ### Command Line
 
 ```sh
-node formatter resources/38331-f10.txt RRCReconfiguration
+node formatter <spec_file> <message/IE name>
+# node formatter resources/38331-f10.txt RRCReconfiguration
 ```
 
 ### Package
 
 TBA
-
