@@ -4,6 +4,7 @@ var readline = require('readline-sync');
 var xlsx = require('@gsongsong/xlsx');
 var extract = require('third-gen-asn1-extractor');
 var parser = require('third-gen-asn1-parser');
+var cellref = require('cellref');
 
 module.exports = exports = format;
 
@@ -212,14 +213,14 @@ function toWorksheet(sheetname, messageIE, depthMax) {
     let rowNum = 1;
     let header = [];
     header.push('IE');
-    styles[cellAddress(rowNum, 1)] = 3;
+    styles[cellref.toA1(`R${rowNum}C1`)] = 3;
     for (let i = 0; i < depthMax; i++) {
         header.push(null);
-        styles[cellAddress(rowNum, 2)] = 1;
+        styles[cellref.toA1(`R${rowNum}C2`)] = 1;
     }
     header.push('M/O/C', 'Need code/Condition', 'Sub IE', 'Type/Description', 'DEFAULT');
     for (let i = 0; i < header.length; i++) {
-        styles[cellAddress(rowNum, depthMax + i + 1)] = 1;
+        styles[cellref.toA1(`R${rowNum}C${depthMax + i + 1}`)] = 1;
     }
     worksheet_data.push(header);
     rowNum++;
@@ -285,36 +286,36 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
     }
     if ('extensionAdditionGroup' in messageIE) {
         worksheet_data.push(['[[']);
-        styles[cellAddress(rowNum, 1)] = 3;
+        styles[cellref.toA1(`R${rowNum}C1`)] = 3;
         rowNum++;
         for (let item of messageIE['extensionAdditionGroup']) {
             rowNum = preorderHelper(worksheet_data, item, styles, rowNum,
                                     depthMax, depth);
         }
         worksheet_data.push([']]']);
-        styles[cellAddress(rowNum, 1)] = 3;
+        styles[cellref.toA1(`R${rowNum}C1`)] = 3;
         rowNum++;
     } else {
         let row = [];
         let k = 0;
         for (let i = 0; i < depth; i++) {
             row.push(null);
-            styles[cellAddress(rowNum, i + 1)] = 2;
+            styles[cellref.toA1(`R${rowNum}C${i + 1}`)] = 2;
             k = i;
         }
         k++;
         // name
         if ('name' in messageIE) {
             row.push(messageIE['name']);
-            styles[cellAddress(rowNum, k + 1)] = 3;
+            styles[cellref.toA1(`R${rowNum}C${k + 1}`)] = 3;
         } else {
             row.push(null);
-            styles[cellAddress(rowNum, k + 1)] = 2;
+            styles[cellref.toA1(`R${rowNum}C${k + 1}`)] = 2;
         }
         k++;
         for (let i = depth; i < depthMax; i++) {
             row.push(null);
-            styles[cellAddress(rowNum, k + 1)] = 1;
+            styles[cellref.toA1(`R${rowNum}C${k + 1}`)] = 1;
             k++;
         }
         // Optional, Conditional, Mandatory
@@ -325,7 +326,7 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         } else {
             row.push('M');
         }
-        styles[cellAddress(rowNum, k + 1)] = 1;
+        styles[cellref.toA1(`R${rowNum}C${k + 1}`)] = 1;
         k++;
         // Choice
         isChoicable = false;
@@ -340,7 +341,7 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         } else {
             row.push(null);
         }
-        styles[cellAddress(rowNum, k + 1)] = 1;
+        styles[cellref.toA1(`R${rowNum}C${k + 1}`)] = 1;
         k++;
         // Custom IE name
         if ('subIE' in messageIE) {
@@ -348,7 +349,7 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         } else {
             row.push(null);
         }
-        styles[cellAddress(rowNum, k + 1)] = 1;
+        styles[cellref.toA1(`R${rowNum}C${k + 1}`)] = 1;
         k++;
         // Actual type
         if ('type' in messageIE) {
@@ -356,12 +357,12 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         } else {
             row.push(null);
         }
-        styles[cellAddress(rowNum, k + 1)] = 1;
+        styles[cellref.toA1(`R${rowNum}C${k + 1}`)] = 1;
         k++;
         if ('default' in messageIE) {
             row.push(messageIE['default']);
         }
-        styles[cellAddress(rowNum, k + 1)] = 1;
+        styles[cellref.toA1(`R${rowNum}C${k + 1}`)] = 1;
         k++;
         worksheet_data.push(row);
         rowNum++;
@@ -461,22 +462,6 @@ function getSizeExpression(messageIE, asn1Json) {
         ret += '))';
     }
     return ret;
-}
-
-function cellAddress(r, c) {
-    let address = base26(c) + r;
-    return address;
-}
-
-// 1: A, 2: B, ..., 27: AA
-function base26(num) {
-    var c = [];
-    while (num) {
-        let r = (num - 1) % 26;
-        c.splice(0, 0, String.fromCharCode('A'.charCodeAt(0) + r));
-        num = Math.floor((num - r) / 26);
-    }
-    return c.join('');
 }
 
 if (require.main == module) {
