@@ -6,7 +6,10 @@ var extract = require('third-gen-asn1-extractor');
 var parser = require('third-gen-asn1-parser');
 var cellref = require('cellref');
 
-module.exports = exports = format;
+exports.expand = expand;
+exports.toWorksheet = toWorksheet;
+exports.toWorkbook = toWorkbook;
+exports.format = format;
 
 var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
                 'OCTET STRING', 'CHOICE', 'SEQUENCE', 'SEQUENCE OF',
