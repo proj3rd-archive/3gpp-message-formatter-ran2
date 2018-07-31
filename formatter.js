@@ -7,9 +7,11 @@ var parser = require('third-gen-asn1-parser');
 var cellref = require('cellref');
 
 exports.expand = expand;
+exports.expandAll =  expandAll;
 exports.toWorksheet = toWorksheet;
 exports.toWorkbook = toWorkbook;
 exports.format = format;
+exports.formatAll = formatAll;
 
 var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
                 'OCTET STRING', 'CHOICE', 'SEQUENCE', 'SEQUENCE OF',
@@ -18,37 +20,8 @@ var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
 function format(messageIEname, asn1Json) {
     let worksheets = [];
     if (messageIEname == '__all') {
-        let messageIEs = {};
-        for (let moduleName in asn1Json) {
-            messageIEs[moduleName] = {};
-            for (let definition in asn1Json[moduleName]) {
-                if (definition == 'import') {
-                    continue;
-                }
-                let messageIE = JSON.parse(JSON.stringify(
-                                            asn1Json[moduleName][definition]));
-                messageIEHelper(messageIE, definition);
-                if (messageIE['type'] == 'INTEGER') {
-                    continue;
-                }
-                console.log(`Formatting ${moduleName}/${definition}...`);
-                let depthMax = expand(messageIE, asn1Json);
-                messageIE['depthMax'] = depthMax;
-                messageIEs[moduleName][definition] = messageIE;
-            }
-        }
-        let idx = 0;
-        for (let moduleName in messageIEs) {
-            for (let definition in messageIEs[moduleName]) {
-                let messageIE = messageIEs[moduleName][definition];
-                let depthMax = messageIE['depthMax'];
-                let idxString = String(idx);
-                worksheets.push(toWorksheet(
-                    `${definition.substring(0, 30 - (idxString.length + 1))} ${idxString}`,
-                    messageIE, depthMax));
-                idx++;
-            }
-        }
+        let messageIEs = expandAll(asn1Json);
+        formatAll(messageIEs, worksheets);
     } else {
         let messageIE = getUniqueMessageIE(messageIEname, asn1Json);
         messageIEHelper(messageIE, messageIEname);
@@ -60,9 +33,47 @@ function format(messageIEname, asn1Json) {
     return toWorkbook(worksheets);
 }
 
+function formatAll(messageIEs, worksheets) {
+    let idx = 0;
+    for (let moduleName in messageIEs) {
+        for (let definition in messageIEs[moduleName]) {
+            let messageIE = messageIEs[moduleName][definition];
+            let depthMax = messageIE['depthMax'];
+            let idxString = String(idx);
+            worksheets.push(toWorksheet(
+                `${definition.substring(0, 30 - (idxString.length + 1))} ${idxString}`,
+                messageIE, depthMax));
+            idx++;
+        }
+    }
+}
+
 function messageIEHelper(messageIE, messageIEname) {
     messageIE['name'] = messageIEname;
     delete messageIE['inventory'];
+}
+
+function expandAll(asn1Json) {
+    let messageIEs = {};
+    for (let moduleName in asn1Json) {
+        messageIEs[moduleName] = {};
+        for (let definition in asn1Json[moduleName]) {
+            if (definition == 'import') {
+                continue;
+            }
+            let messageIE = JSON.parse(JSON.stringify(
+                                        asn1Json[moduleName][definition]));
+            messageIEHelper(messageIE, definition);
+            if (messageIE['type'] == 'INTEGER') {
+                continue;
+            }
+            console.log(`Formatting ${moduleName}/${definition}...`);
+            let depthMax = expand(messageIE, asn1Json);
+            messageIE['depthMax'] = depthMax;
+            messageIEs[moduleName][definition] = messageIE;
+        }
+    }
+    return messageIEs;
 }
 
 function expand(messageIE, asn1Json, depth = 0) {
