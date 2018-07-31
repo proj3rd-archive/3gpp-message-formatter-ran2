@@ -18,8 +18,9 @@ var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
 function format(messageIEname, asn1Json) {
     let worksheets = [];
     if (messageIEname == '__all') {
-        let idx = 0;
+        let messageIEs = {};
         for (let moduleName in asn1Json) {
+            messageIEs[moduleName] = {};
             for (let definition in asn1Json[moduleName]) {
                 if (definition == 'import') {
                     continue;
@@ -32,7 +33,15 @@ function format(messageIEname, asn1Json) {
                 }
                 console.log(`Formatting ${moduleName}/${definition}...`);
                 let depthMax = expand(messageIE, asn1Json);
-                // logJson(messageIE);
+                messageIE['depthMax'] = depthMax;
+                messageIEs[moduleName][definition] = messageIE;
+            }
+        }
+        let idx = 0;
+        for (let moduleName in messageIEs) {
+            for (let definition in messageIEs[moduleName]) {
+                let messageIE = messageIEs[moduleName][definition];
+                let depthMax = messageIE['depthMax'];
                 let idxString = String(idx);
                 worksheets.push(toWorksheet(
                     `${definition.substring(0, 30 - (idxString.length + 1))} ${idxString}`,
