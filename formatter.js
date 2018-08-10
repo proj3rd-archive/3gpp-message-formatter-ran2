@@ -500,7 +500,7 @@ if (require.main == module) {
         if (messageIEname == '__all') {
             outputFile = `${inputFile['name']}.xlsx`;
         } else {
-            outputFile = `${messageIEname}.xlsx`;
+            outputFile = `${messageIEname}-${inputFile['name']}.xlsx`;
         }
         xlsx.writeFile(format(messageIEname, asn1Json), outputFile);
     } else {
