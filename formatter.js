@@ -330,7 +330,7 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
             styles[addr({c: i, r: rowNum})] = {fill: fillWhite, border: borderLeft};
             k = i;
         }
-        k++;
+        if (depth) k++;
         // name
         if ('name' in messageIE) {
             row.push(messageIE['name']);
