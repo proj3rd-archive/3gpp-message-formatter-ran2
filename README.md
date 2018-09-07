@@ -2,6 +2,12 @@
 
 It generates an Excel sheet for each 3GPP RRC (36.331, 38.331) message/IE
 
+![](_assets/ex_RRCConnReconfig.png)
+
+**Looking for [RAN2/RAN3 integrated binary][3gpp-message-formatter]?**
+
+[3gpp-message-formatter]: https://github.com/gsongsong/3gpp-message-formatter
+
 ## Installation
 
 ```sh
