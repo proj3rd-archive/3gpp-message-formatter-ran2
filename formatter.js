@@ -317,7 +317,7 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         rowNum++;
         for (let item of messageIE['extensionAdditionGroup']) {
             rowNum = preorderHelper(worksheet_data, item, styles, rowNum,
-                                    depthMax, depth);
+                                    depthMax, depth, isChoicable);
         }
         worksheet_data.push([']]']);
         styles[addr({c: 0, r: rowNum})] = {fill: fillWhite, border: borderTopLeft};
