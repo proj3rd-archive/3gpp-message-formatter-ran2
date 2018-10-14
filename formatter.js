@@ -66,8 +66,9 @@ function expandAll(asn1Json) {
             if (definition == 'import') {
                 continue;
             }
-            let messageIE = JSON.parse(JSON.stringify(
-                                        asn1Json[moduleName][definition]));
+            let messageIE = Object.assign(JSON.parse(JSON.stringify(
+                                        asn1Json[moduleName][definition])),
+                                        {module: moduleName});
             messageIEHelper(messageIE, definition);
             if (messageIE['type'] == 'INTEGER') {
                 continue;
@@ -114,12 +115,12 @@ function expand(messageIE, asn1Json, depth = 0) {
                     delete messageIE['containing'];
                     messageIE['type'] += ` (CONTAINING ${containedName})`;
                     let containedIE = getUniqueMessageIE(containedName,
-                                                            asn1Json);
+                                                asn1Json, messageIE['module']);
                     delete containedIE['inventory'];
                     messageIE['content'] = [containedIE];
                     messageIE['content'][0]['name'] = containedName;
                     for (let item of messageIE['content']) {
-                        depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
+                        depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1));
                         mergeConstants(messageIE, item);
                     }
                 }
@@ -132,12 +133,13 @@ function expand(messageIE, asn1Json, depth = 0) {
                 delete messageIE['sizeMin'];
                 delete messageIE['sizeMax'];
                 if (!builtIns.includes(memberName)) {
-                    let memberIE = getUniqueMessageIE(memberName, asn1Json);
+                    let memberIE = getUniqueMessageIE(memberName, asn1Json,
+                                                      messageIE['module']);
                     delete memberIE['inventory'];
                     messageIE['content'] = [memberIE];
                     messageIE['content'][0]['name'] = memberName;
                     for (let item of messageIE['content']) {
-                        depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
+                        depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1));
                         mergeConstants(messageIE, item);
                     }
                 }
@@ -145,7 +147,7 @@ function expand(messageIE, asn1Json, depth = 0) {
             case 'CHOICE':
             case 'SEQUENCE':
                 for (let item of messageIE['content'] ) {
-                    depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
+                    depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1));
                     mergeConstants(messageIE, item);
                 }
                 break;
@@ -154,7 +156,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     if ('parameters' in messageIE) {
                         if (messageIE['parameters'].length) {
                             let type = getUniqueMessageIE(messageIE['type'],
-                                                            asn1Json);
+                                                asn1Json, messageIE['module']);
                             substituteArguments(type, type['parameters'], messageIE['parameters']);
                             messageIE['subIE'] = `${messageIE['type']} {${messageIE['parameters']
                                                                 .join(', ')}}`;
@@ -166,7 +168,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                         if (!messageIE['isParameter']) {
                             messageIE['subIE'] = messageIE['type'];
                             let type = getUniqueMessageIE(messageIE['type'],
-                                                            asn1Json);
+                                                asn1Json, messageIE['module']);
                             delete type['inventory'];
                             Object.assign(messageIE, type);
                             if ('content' in messageIE) {
@@ -189,7 +191,7 @@ function expand(messageIE, asn1Json, depth = 0) {
     } else if ('extensionAdditionGroup' in messageIE) {
         // TODO: This is experimental
         for (let item of messageIE['extensionAdditionGroup']) {
-            depthMax = Math.max(depthMax, expand(item, asn1Json, depth));
+            depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth));
         }
     }
     return depthMax;
@@ -403,7 +405,26 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
     return rowNum;
 }
 
-function getUniqueMessageIE(messageIEname, asn1Json) {
+function getUniqueMessageIE(messageIEname, asn1Json, moduleName) {
+    if (moduleName) {
+        // 1. Search in the current module
+        if (moduleName in asn1Json && 
+            Object.keys(asn1Json[moduleName]).includes(messageIEname)) {
+                return Object.assign(JSON.parse(JSON.stringify(
+                                        asn1Json[moduleName][messageIEname])),
+                                     {module: moduleName, constants: {}});
+        }
+        // 2. Search in moduleName's import (list of list)
+        for (let importedModuleName in asn1Json[moduleName].import) {
+            let importedModule = asn1Json[moduleName]['import'][importedModuleName];
+            if (importedModule.includes(messageIEname)) {
+                return Object.assign(
+                            JSON.parse(JSON.stringify(
+                                asn1Json[importedModuleName][messageIEname])),
+                            {module: importedModuleName, constants: {}});
+            }
+        }
+    }
     let messageIEs = parser.getAsn1ByName(messageIEname, asn1Json);
     let modules = Object.keys(messageIEs);
     let idx = 0;
@@ -422,7 +443,7 @@ function getUniqueMessageIE(messageIEname, asn1Json) {
             break;
     }
     return Object.assign(JSON.parse(JSON.stringify(messageIEs[modules[idx]])),
-                            {'module': modules[idx], 'constants': {}});
+                         {module: modules[idx], constants: {}});
 }
 
 function integerHelper(messageIE, asn1Json) {
@@ -437,7 +458,7 @@ function integerHelper(messageIE, asn1Json) {
             let value = messageIE['value'];
             if (Number(value) != value) {
                 messageIE['constants'][value] = getUniqueMessageIE(value,
-                                                                    asn1Json);
+                                                asn1Json, messageIE['module']);
             }
             ret += value;
         } else if ('start' in messageIE) {
@@ -445,11 +466,11 @@ function integerHelper(messageIE, asn1Json) {
             let end = messageIE['end'];
             if (Number(start) != start) {
                 messageIE['constants'][start] = getUniqueMessageIE(start,
-                                                                    asn1Json);
+                                                asn1Json, messageIE['module']);
             }
             if (Number(end) != end) {
                 messageIE['constants'][end] = getUniqueMessageIE(end,
-                                                                    asn1Json);
+                                                asn1Json, messageIE['module']);
             }
             ret += `${start}..${end}`;
         }
@@ -470,7 +491,7 @@ function getSizeExpression(messageIE, asn1Json) {
             let size = messageIE['size'];
             if (Number(size) != size) {
                 messageIE['constants'][size] = getUniqueMessageIE(size,
-                                                                    asn1Json);
+                                                asn1Json, messageIE['module']);
             }
             ret += size;
         } else if ('sizeMin' in messageIE) {
@@ -478,11 +499,11 @@ function getSizeExpression(messageIE, asn1Json) {
             let sizeMax = messageIE['sizeMax'];
             if (Number(sizeMin) != sizeMin) {
                 messageIE['constants'][sizeMin] = getUniqueMessageIE(sizeMin,
-                                                                     asn1Json);
+                                                asn1Json, messageIE['module']);
             }
             if (Number(sizeMax) != sizeMax) {
                 messageIE['constants'][sizeMax] = getUniqueMessageIE(sizeMax,
-                                                                     asn1Json);
+                                                asn1Json, messageIE['module']);
             }
             ret += `${sizeMin}..${sizeMax}`;
         }
