@@ -310,7 +310,7 @@ function toWorkbook(worksheets, styles) {
 
 function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
                         depth = 0, isChoicable = false) {
-    if (!Object.keys(messageIE).length) {
+    if (Object.keys(messageIE).length == 1 && 'module' in messageIE) {
         return rowNum;
     }
     if ('extensionAdditionGroup' in messageIE) {
