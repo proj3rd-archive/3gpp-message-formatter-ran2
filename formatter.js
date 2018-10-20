@@ -1,5 +1,6 @@
 var fs = require('fs');
 var path = require('path');
+var ArgumentParser = require('argparse').ArgumentParser;
 var readline = require('readline-sync');
 var xlsx = require('@gsongsong/xlsx');
 var addr = xlsx.utils.encode_cell;
@@ -513,25 +514,30 @@ function getSizeExpression(messageIE, asn1Json) {
 }
 
 if (require.main == module) {
-    if (process.argv.length >= 4) {
-        let inputFile = path.parse(process.argv[2]);
-        let input = extract(fs.readFileSync(path.resolve(process.cwd(),
-                                                            inputFile['dir'],
-                                                            inputFile['base']),
-                                            'utf8'));
-        let messageIEname = process.argv[3];
-        let asn1Json = parser.parse(input);
-        let outputFile;
-        if (messageIEname == '__all') {
-            outputFile = `${inputFile['name']}.xlsx`;
-        } else {
-            outputFile = `${messageIEname}-${inputFile['name']}.xlsx`;
-        }
-        xlsx.writeFile(format(messageIEname, asn1Json), outputFile);
+    let argParser = new ArgumentParser({addHelp: true, debug: true});
+    argParser.addArgument('specFile', {help: 'Sepcification file name'});
+    argParser.addArgument('messageIEname', {help: 'Message or IE name'});
+    let args = {};
+    try {
+        args = argParser.parseArgs();
+    } catch (e) {
+        argParser.printHelp();
+        process.exit();
+    }
+    let inputFile = path.parse(args.specFile);
+    let input = extract(fs.readFileSync(path.resolve(process.cwd(),
+                                                        inputFile['dir'],
+                                                        inputFile['base']),
+                                        'utf8'));
+    let messageIEname = args.messageIEname;
+    let asn1Json = parser.parse(input);
+    let outputFile;
+    if (messageIEname == '__all') {
+        outputFile = `${inputFile['name']}.xlsx`;
     } else {
-        console.log('Usage: node formatter <file_name> <message/IE>');
-        console.log('  ex : node formatter 38331-f10.asn1 RRCReconfiguration');
-    } 
+        outputFile = `${messageIEname}-${inputFile['name']}.xlsx`;
+    }
+    xlsx.writeFile(format(messageIEname, asn1Json), outputFile);
 }
 
 function logJson(json) {
