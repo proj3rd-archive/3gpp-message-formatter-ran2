@@ -19,17 +19,17 @@ var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
                 'OCTET STRING', 'CHOICE', 'SEQUENCE', 'SEQUENCE OF',
                 'BIT', 'OCTET' /* HACK */];
 
-function format(messageIEname, asn1Json) {
+function format(messageIEname, asn1Json, raw = false) {
     let worksheets = [];
     let styles = [];
     if (messageIEname == '__all') {
-        let messageIEs = expandAll(asn1Json);
+        let messageIEs = expandAll(asn1Json, raw);
         formatAll(messageIEs, worksheets, styles);
     } else {
         let messageIE = getUniqueMessageIE(messageIEname, asn1Json);
         messageIEHelper(messageIE, messageIEname);
         console.log(`Formatting ${messageIE['module']}/${messageIEname}...`);
-        let depthMax = expand(messageIE, asn1Json);
+        let depthMax = expand(messageIE, asn1Json, 0, raw);
         let worksheetWithStyle = toWorksheet(messageIEname, messageIE, depthMax);
         worksheets.push(worksheetWithStyle['worksheet']);
         styles.push(worksheetWithStyle['style']);
@@ -59,7 +59,7 @@ function messageIEHelper(messageIE, messageIEname) {
     delete messageIE['inventory'];
 }
 
-function expandAll(asn1Json) {
+function expandAll(asn1Json, raw = false) {
     let messageIEs = {};
     for (let moduleName in asn1Json) {
         messageIEs[moduleName] = {};
@@ -75,7 +75,7 @@ function expandAll(asn1Json) {
                 continue;
             }
             console.log(`Formatting ${moduleName}/${definition}...`);
-            let depthMax = expand(messageIE, asn1Json);
+            let depthMax = expand(messageIE, asn1Json, 0, raw);
             messageIE['depthMax'] = depthMax;
             messageIEs[moduleName][definition] = messageIE;
         }
@@ -83,7 +83,7 @@ function expandAll(asn1Json) {
     return messageIEs;
 }
 
-function expand(messageIE, asn1Json, depth = 0) {
+function expand(messageIE, asn1Json, depth = 0, raw = false) {
     // TODO: more elegant way?
     if (!('constants' in messageIE)) {
         messageIE['constants'] = {};
@@ -111,7 +111,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                 delete messageIE['end'];
                 break;
             case 'OCTET STRING':
-                if ('containing' in messageIE) {
+                if ('containing' in messageIE && !raw) {
                     let containedName = messageIE['containing'];
                     delete messageIE['containing'];
                     messageIE['type'] += ` (CONTAINING ${containedName})`;
@@ -121,7 +121,7 @@ function expand(messageIE, asn1Json, depth = 0) {
                     messageIE['content'] = [containedIE];
                     messageIE['content'][0]['name'] = containedName;
                     for (let item of messageIE['content']) {
-                        depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1));
+                        depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1, raw));
                         mergeConstants(messageIE, item);
                     }
                 }
@@ -133,14 +133,14 @@ function expand(messageIE, asn1Json, depth = 0) {
                 delete messageIE['size'];
                 delete messageIE['sizeMin'];
                 delete messageIE['sizeMax'];
-                if (!builtIns.includes(memberName)) {
+                if (!builtIns.includes(memberName) && !raw) {
                     let memberIE = getUniqueMessageIE(memberName, asn1Json,
                                                       messageIE['module']);
                     delete memberIE['inventory'];
                     messageIE['content'] = [memberIE];
                     messageIE['content'][0]['name'] = memberName;
                     for (let item of messageIE['content']) {
-                        depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1));
+                        depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1, raw));
                         mergeConstants(messageIE, item);
                     }
                 }
@@ -148,25 +148,25 @@ function expand(messageIE, asn1Json, depth = 0) {
             case 'CHOICE':
             case 'SEQUENCE':
                 for (let item of messageIE['content'] ) {
-                    depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1));
+                    depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1, raw));
                     mergeConstants(messageIE, item);
                 }
                 break;
             default:
                 if (!builtIns.includes(messageIE['type'].split(' ')[0])) {
                     if ('parameters' in messageIE) {
-                        if (messageIE['parameters'].length) {
+                        if (messageIE['parameters'].length && !raw) {
                             let type = getUniqueMessageIE(messageIE['type'],
                                                 asn1Json, messageIE['module']);
                             substituteArguments(type, type['parameters'], messageIE['parameters']);
                             messageIE['subIE'] = `${messageIE['type']} {${messageIE['parameters']
                                                                 .join(', ')}}`;
                             Object.assign(messageIE, type);
-                            depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth));
+                            depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth, raw));
                         }
                         messageIE['parameters'] = [];
                     } else {
-                        if (!messageIE['isParameter']) {
+                        if (!messageIE['isParameter'] && !raw) {
                             messageIE['subIE'] = messageIE['type'];
                             let type = getUniqueMessageIE(messageIE['type'],
                                                 asn1Json, messageIE['module']);
@@ -175,13 +175,13 @@ function expand(messageIE, asn1Json, depth = 0) {
                             if ('content' in messageIE) {
                                 // messageIE['content'][0]['name'] = messageIE['subIE'];
                             }
-                            depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth));
+                            depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth, raw));
                         }
                     }
                 }
                 if ('content' in messageIE) {
                     for (let item of messageIE['content']) {
-                        depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1));
+                        depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1, raw));
                         mergeConstants(messageIE, item);
                     }
                 }
@@ -192,7 +192,7 @@ function expand(messageIE, asn1Json, depth = 0) {
     } else if ('extensionAdditionGroup' in messageIE) {
         // TODO: This is experimental
         for (let item of messageIE['extensionAdditionGroup']) {
-            depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth));
+            depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth, raw));
         }
     }
     return depthMax;
@@ -517,6 +517,8 @@ if (require.main == module) {
     let argParser = new ArgumentParser({addHelp: true, debug: true});
     argParser.addArgument('specFile', {help: 'Sepcification file name'});
     argParser.addArgument('messageIEname', {help: 'Message or IE name'});
+    argParser.addArgument(['-r', '--raw'], {help: 'Do not expand sub IEs',
+                                            action: 'storeTrue'});
     let args = {};
     try {
         args = argParser.parseArgs();
@@ -533,11 +535,15 @@ if (require.main == module) {
     let asn1Json = parser.parse(input);
     let outputFile;
     if (messageIEname == '__all') {
-        outputFile = `${inputFile['name']}.xlsx`;
+        outputFile = inputFile['name'];
     } else {
-        outputFile = `${messageIEname}-${inputFile['name']}.xlsx`;
+        outputFile = `${messageIEname}-${inputFile['name']}`;
     }
-    xlsx.writeFile(format(messageIEname, asn1Json), outputFile);
+    if (args.raw) {
+        outputFile += '-raw';
+    }
+    outputFile += '.xlsx';
+    xlsx.writeFile(format(messageIEname, asn1Json, args.raw), outputFile);
 }
 
 function logJson(json) {
