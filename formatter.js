@@ -8,10 +8,15 @@ var xlsx = require('@gsongsong/xlsx');
 var libExpand = require('./lib/expand');
 var libFormatXlsx = require('./lib/formatXlsx');
 
-exports.expand = expand = libExpand.expand;
-exports.expandAll =  expandAll = libExpand.expandAll;
-exports.toWorksheet = toWorksheet = libFormatXlsx.toWorksheet;
-exports.toWorkbook = toWorkbook = libFormatXlsx.toWorkbook;
+var expand = libExpand.expand;
+var expandAll = libExpand.expandAll;
+var toWorksheet = libFormatXlsx.toWorksheet;
+var toWorkbook = libFormatXlsx.toWorkbook;
+
+exports.expand = expand;
+exports.expandAll =  expandAll;
+exports.toWorksheet = toWorksheet;
+exports.toWorkbook = toWorkbook;
 exports.format = format;
 exports.formatAll = formatAll;
 
