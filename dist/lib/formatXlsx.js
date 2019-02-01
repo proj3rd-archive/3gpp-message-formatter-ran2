@@ -1,15 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var xlsx = require('@gsongsong/xlsx');
 var addr = xlsx.utils.encode_cell;
 var cell = xlsx.utils.decode_cell;
-
-exports.toWorkbook = toWorkbook;
-exports.toWorksheet = toWorksheet;
-
-var fillWhite = { patternType: 'solid', fgColor: { rgb: 'FFFFFFFF' } }
+var fillWhite = { patternType: 'solid', fgColor: { rgb: 'FFFFFFFF' } };
 var borderTop = { top: { style: 'thin' } };
 var borderLeft = { left: { style: 'thin' } };
 var borderTopLeft = { top: { style: 'thin' }, left: { style: 'thin' } };
-
 function toWorkbook(worksheets, styles) {
     let workbook = xlsx.utils.book_new();
     for (let i = 0; i < worksheets.length; i++) {
@@ -25,13 +22,11 @@ function toWorkbook(worksheets, styles) {
         }
     }
     for (let worksheet of worksheets) {
-        xlsx.utils.book_append_sheet(workbook,
-            worksheet['worksheet'],
-            worksheet['sheetname']);
+        xlsx.utils.book_append_sheet(workbook, worksheet['worksheet'], worksheet['sheetname']);
     }
     return workbook;
 }
-
+exports.toWorkbook = toWorkbook;
 function toWorksheet(sheetname, messageIE, depthMax) {
     let worksheet_data = [];
     let styles = {};
@@ -78,9 +73,8 @@ function toWorksheet(sheetname, messageIE, depthMax) {
         style: styles
     };
 }
-
-function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
-    depth = 0, isChoicable = false) {
+exports.toWorksheet = toWorksheet;
+function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax, depth = 0, isChoicable = false) {
     if (Object.keys(messageIE).length == 1 && 'module' in messageIE) {
         return rowNum;
     }
@@ -90,23 +84,23 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
             row.push(null);
             styles[addr({ c: i, r: rowNum })] = { fill: fillWhite, border: borderLeft };
         }
-        row.push('[[')
+        row.push('[[');
         worksheet_data.push(row);
         styles[addr({ c: depth, r: rowNum })] = { fill: fillWhite, border: borderTopLeft };
         rowNum++;
         for (let item of messageIE['extensionAdditionGroup']) {
-            rowNum = preorderHelper(worksheet_data, item, styles, rowNum,
-                depthMax, depth + 1, isChoicable);
+            rowNum = preorderHelper(worksheet_data, item, styles, rowNum, depthMax, depth + 1, isChoicable);
         }
         row = row.slice();
         for (let i = 0; i < depth; i++) {
             styles[addr({ c: i, r: rowNum })] = { fill: fillWhite, border: borderLeft };
         }
-        row[row.length - 1] = ']]'
+        row[row.length - 1] = ']]';
         worksheet_data.push(row);
         styles[addr({ c: depth, r: rowNum })] = { fill: fillWhite, border: borderLeft };
         rowNum++;
-    } else {
+    }
+    else {
         let row = [];
         let k = 0;
         for (let i = 0; i < depth; i++) {
@@ -114,7 +108,8 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
             styles[addr({ c: i, r: rowNum })] = { fill: fillWhite, border: borderLeft };
             k = i;
         }
-        if (depth) k++;
+        if (depth)
+            k++;
         // name
         if ('name' in messageIE) {
             if (messageIE['name'] == '...') {
@@ -122,7 +117,8 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
             }
             row.push(messageIE['name']);
             styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTopLeft };
-        } else {
+        }
+        else {
             row.push(null);
             styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderLeft };
         }
@@ -135,9 +131,11 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         // Optional, Conditional, Mandatory
         if ('optional' in messageIE) {
             row.push('O');
-        } else if (isChoicable) {
+        }
+        else if (isChoicable) {
             row.push('C');
-        } else {
+        }
+        else {
             row.push('M');
         }
         styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
@@ -150,9 +148,11 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         // Need code, condition
         if ('needCode' in messageIE) {
             row.push(messageIE['needCode'].substring(3));
-        } else if ('condition' in messageIE) {
+        }
+        else if ('condition' in messageIE) {
             row.push(`Cond ${messageIE['condition']}`);
-        } else {
+        }
+        else {
             row.push(null);
         }
         styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
@@ -160,7 +160,8 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         // Custom IE name
         if ('subIE' in messageIE) {
             row.push(messageIE['subIE']);
-        } else {
+        }
+        else {
             row.push(null);
         }
         styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
@@ -168,7 +169,8 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         // Actual type
         if ('type' in messageIE) {
             row.push(messageIE['type']);
-        } else {
+        }
+        else {
             row.push(null);
         }
         styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
@@ -182,8 +184,7 @@ function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax,
         rowNum++;
         if ('content' in messageIE) {
             for (let item of messageIE['content']) {
-                rowNum = preorderHelper(worksheet_data, item, styles, rowNum,
-                    depthMax, depth + 1, isChoicable);
+                rowNum = preorderHelper(worksheet_data, item, styles, rowNum, depthMax, depth + 1, isChoicable);
             }
         }
     }

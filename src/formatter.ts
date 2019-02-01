@@ -81,7 +81,7 @@ if (require.main == module) {
                                             action: 'storeTrue'});
     argParser.addArgument(['-f', '--format'], {defaultValue: 'xlsx',
                                             help: 'Output format. [xlsx]/txt'});
-    let args = {};
+    let args: any = {};
     try {
         args = argParser.parseArgs();
     } catch (e) {

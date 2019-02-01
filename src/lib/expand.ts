@@ -1,13 +1,10 @@
 let getUniqueMessageIE = require('third-gen-asn1-parser').getUniqueMessageIE;
 
-exports.expand = expand;
-exports.expandAll = expandAll;
-
 var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
                 'OCTET STRING', 'CHOICE', 'SEQUENCE', 'SEQUENCE OF',
                 'BIT', 'OCTET' /* HACK */];
 
-function expand(messageIE, asn1Json, depth = 0, raw = false) {
+export function expand(messageIE, asn1Json, depth = 0, raw = false) {
     // TODO: more elegant way?
     if (!('constants' in messageIE)) {
         messageIE['constants'] = {};
@@ -66,7 +63,7 @@ function expand(messageIE, asn1Json, depth = 0, raw = false) {
                 delete messageIE['size'];
                 delete messageIE['sizeMin'];
                 delete messageIE['sizeMax'];
-                if (!builtIns.includes(memberName) && !raw) {
+                if (builtIns.indexOf(memberName) == -1 && !raw) {
                     let memberIE = getUniqueMessageIE(memberName, asn1Json,
                                                       messageIE['module']);
                     delete memberIE['inventory'];
@@ -86,7 +83,7 @@ function expand(messageIE, asn1Json, depth = 0, raw = false) {
                 }
                 break;
             default:
-                if (!builtIns.includes(messageIE['type'].split(' ')[0])) {
+                if (builtIns.indexOf(messageIE['type'].split(' ')[0]) == -1) {
                     if ('parameters' in messageIE) {
                         if (messageIE['parameters'].length) {
                             let newType = `${messageIE['type']} {${messageIE['parameters']
@@ -130,13 +127,13 @@ function expand(messageIE, asn1Json, depth = 0, raw = false) {
     } else if ('extensionAdditionGroup' in messageIE) {
         // TODO: This is experimental
         for (let item of messageIE['extensionAdditionGroup']) {
-            depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth, raw));
+            depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1, raw));
         }
     }
     return depthMax;
 }
 
-function expandAll(asn1Json, raw = false) {
+export function expandAll(asn1Json, raw = false) {
     let messageIEs = {};
     for (let moduleName in asn1Json) {
         messageIEs[moduleName] = {};

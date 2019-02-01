@@ -1,6 +1,4 @@
-exports.formatTxt = formatTxt;
-
-function formatTxt(messageIEname, messageIE) {
+export function formatTxt(messageIEname, messageIE) {
     let outputArr = [`${messageIEname} ::= `];
     preorderHelper(outputArr, messageIE);
     // if (Object.keys(messageIE['constants']).length) {
@@ -17,7 +15,7 @@ function formatTxt(messageIEname, messageIE) {
     return outputArr.join('');
 }
 
-function preorderHelper(outputArr, messageIE, depth = 0, itemFollows) {
+function preorderHelper(outputArr, messageIE, depth = 0, itemFollows = false) {
     if (Object.keys(messageIE).length == 1 && 'module' in messageIE) {
         return;
     }

@@ -1,12 +1,12 @@
 {
   "name": "third-gen-message-formatter-ran2",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/gsongsong/3gpp-message-formatter-ran2"
   },
-  "main": "formatter.js",
+  "main": "dist/formatter.js",
   "scripts": {
     "pkg-win": "npm run pkg-win-x64 && npm run pkg-win-x86",
     "pkg-win-x64": "pkg formatter.js -t node6-win-x64 -o formatter-x64.exe",
@@ -18,5 +18,8 @@
     "readline-sync": "^1.4.9",
     "third-gen-asn1-extractor": "^1.0.2",
     "third-gen-asn1-parser": "^1.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^10.12.21"
   }
 }
