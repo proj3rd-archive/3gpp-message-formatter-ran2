@@ -15,6 +15,7 @@
   "dependencies": {
     "@gsongsong/xlsx": "^0.13.3",
     "argparse": "^1.0.10",
+    "excel4node": "^1.7.0",
     "readline-sync": "^1.4.9",
     "third-gen-asn1-extractor": "^1.0.2",
     "third-gen-asn1-parser": "^1.0.6"

@@ -1,190 +1,197 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var xlsx = require('@gsongsong/xlsx');
-var addr = xlsx.utils.encode_cell;
-var cell = xlsx.utils.decode_cell;
-var fillWhite = { patternType: 'solid', fgColor: { rgb: 'FFFFFFFF' } };
+var xlsx = require('excel4node');
+var fillWhite = {
+    type: 'pattern',
+    patternType: 'solid',
+    fgColor: 'FFFFFF'
+};
 var borderTop = { top: { style: 'thin' } };
 var borderLeft = { left: { style: 'thin' } };
 var borderTopLeft = { top: { style: 'thin' }, left: { style: 'thin' } };
-function toWorkbook(worksheets, styles) {
-    let workbook = xlsx.utils.book_new();
-    for (let i = 0; i < worksheets.length; i++) {
-        let worksheet = worksheets[i];
-        let style = styles[i];
-        for (let address in style) {
-            if ('fill' in style[address]) {
-                xlsx.utils.set_fill(workbook, worksheet['worksheet'], cell(address), style[address]['fill']);
-            }
-            if ('border' in style[address]) {
-                xlsx.utils.set_border(workbook, worksheet['worksheet'], cell(address), style[address]['border']);
-            }
-        }
-    }
-    for (let worksheet of worksheets) {
-        xlsx.utils.book_append_sheet(workbook, worksheet['worksheet'], worksheet['sheetname']);
-    }
+var borderAll = {
+    top: { style: 'thin' },
+    bottom: { style: 'thin' },
+    left: { style: 'thin' },
+    right: { style: 'thin' },
+};
+function toWorkbook(messageIEname, messageIE, depthMax) {
+    let workbook = new xlsx.Workbook();
+    let sheetname = messageIEname.substring(0, 30);
+    let worksheet = workbook.addWorksheet(sheetname);
+    fillWorksheet(worksheet, messageIE, depthMax);
     return workbook;
 }
 exports.toWorkbook = toWorkbook;
-function toWorksheet(sheetname, messageIE, depthMax) {
-    let worksheet_data = [];
-    let styles = {};
-    let rowNum = 0;
-    let header = [];
-    header.push('IE');
-    styles[addr({ c: 0, r: rowNum })] = { fill: fillWhite, border: borderTopLeft };
+function fillWorksheet(ws, messageIE, depthMax) {
     for (let i = 0; i < depthMax; i++) {
-        header.push(null);
-        styles[addr({ c: i + 1, r: rowNum })] = { fill: fillWhite, border: borderTop };
+        ws.column(i + 1).setWidth(3);
     }
-    header.push('M/O/C', 'Need code/Condition', 'Sub IE', 'Type/Description', 'DEFAULT');
-    for (let i = 0; i < header.length; i++) {
-        styles[addr({ c: i + depthMax, r: rowNum })] = { fill: fillWhite, border: borderTop };
-    }
-    worksheet_data.push(header);
-    rowNum++;
-    preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax);
+    ws.column(depthMax + 1).setWidth(30);
+    let rowNum = 1;
+    ws.cell(rowNum, 1).string('IE').style({
+        fill: fillWhite,
+        border: borderTopLeft
+    });
+    ws.cell(rowNum, 2, rowNum, depthMax + 1).style({
+        fill: fillWhite,
+        border: borderTop
+    });
+    ws.cell(rowNum, depthMax + 2).string('M/O/C');
+    ws.cell(rowNum, depthMax + 3).string('Need code/Condition');
+    ws.cell(rowNum, depthMax + 4).string('Sub IE');
+    ws.cell(rowNum, depthMax + 5).string('Type/Description');
+    ws.cell(rowNum, depthMax + 6).string('DEFAULT');
+    ws.cell(rowNum, depthMax + 2, rowNum, depthMax + 6).style({
+        fill: fillWhite,
+        border: borderTop
+    });
+    rowNum = preorderHelper(ws, messageIE, ++rowNum, depthMax);
     if (Object.keys(messageIE['constants']).length) {
-        worksheet_data.push([null]);
-        worksheet_data.push(['Constants']);
+        rowNum++;
+        ws.cell(rowNum, 1, rowNum, depthMax + 2, true).string('Constants').style({
+            fill: fillWhite,
+            border: borderAll
+        });
         for (let key in messageIE['constants']) {
-            let row = [key, messageIE['constants'][key]['value']];
-            for (let i = 0; i < depthMax; i++) {
-                row.splice(1, 0, null);
-            }
-            worksheet_data.push(row);
+            rowNum++;
+            ws.cell(rowNum, 1, rowNum, depthMax + 1, true).string(key).style({
+                fill: fillWhite,
+                border: borderAll
+            });
+            ws.cell(rowNum, depthMax + 2).number(messageIE['constants'][key]['value']).style({
+                fill: fillWhite,
+                border: borderAll
+            });
         }
     }
-    let worksheet = xlsx.utils.aoa_to_sheet(worksheet_data);
-    worksheet['!cols'] = [];
-    for (let i = 0; i < depthMax; i++) {
-        worksheet['!cols'].push({ wch: 3 });
-    }
-    worksheet['!cols'].push({ wch: 30 });
-    for (let cell in styles) {
-        if (!(cell in worksheet)) {
-            worksheet[cell] = {};
-        }
-    }
-    sheetname = sheetname.substring(0, 30);
-    return {
-        worksheet: { sheetname: sheetname, worksheet: worksheet },
-        style: styles
-    };
 }
-exports.toWorksheet = toWorksheet;
-function preorderHelper(worksheet_data, messageIE, styles, rowNum, depthMax, depth = 0, isChoicable = false) {
+exports.fillWorksheet = fillWorksheet;
+function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable = false) {
     if (Object.keys(messageIE).length == 1 && 'module' in messageIE) {
         return rowNum;
     }
     if ('extensionAdditionGroup' in messageIE) {
-        let row = [];
-        for (let i = 0; i < depth; i++) {
-            row.push(null);
-            styles[addr({ c: i, r: rowNum })] = { fill: fillWhite, border: borderLeft };
-        }
-        row.push('[[');
-        worksheet_data.push(row);
-        styles[addr({ c: depth, r: rowNum })] = { fill: fillWhite, border: borderTopLeft };
+        ws.cell(rowNum, 1, rowNum, depth + 1).style({
+            fill: fillWhite,
+            border: borderLeft
+        });
+        ws.cell(rowNum, depth + 2).string('[[').style({
+            fill: fillWhite,
+            border: borderTopLeft
+        });
+        ws.cell(rowNum, depth + 3, rowNum, depthMax + 6).style({
+            fill: fillWhite,
+            border: borderTop
+        });
         rowNum++;
         for (let item of messageIE['extensionAdditionGroup']) {
-            rowNum = preorderHelper(worksheet_data, item, styles, rowNum, depthMax, depth + 1, isChoicable);
+            rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 2, isChoicable);
         }
-        row = row.slice();
-        for (let i = 0; i < depth; i++) {
-            styles[addr({ c: i, r: rowNum })] = { fill: fillWhite, border: borderLeft };
-        }
-        row[row.length - 1] = ']]';
-        worksheet_data.push(row);
-        styles[addr({ c: depth, r: rowNum })] = { fill: fillWhite, border: borderLeft };
+        ws.cell(rowNum, 1, rowNum, depth + 1).style({
+            fill: fillWhite,
+            border: borderLeft
+        });
+        ws.cell(rowNum, depth + 2).string(']]').style({
+            fill: fillWhite,
+            border: borderTopLeft
+        });
+        ws.cell(rowNum, depth + 3, rowNum, depthMax + 6).style({
+            fill: fillWhite,
+            border: borderTop
+        });
         rowNum++;
     }
     else {
         let row = [];
-        let k = 0;
-        for (let i = 0; i < depth; i++) {
-            row.push(null);
-            styles[addr({ c: i, r: rowNum })] = { fill: fillWhite, border: borderLeft };
-            k = i;
-        }
-        if (depth)
-            k++;
+        let k = depth ? depth + 1 : 1;
+        ws.cell(rowNum, 1, rowNum, depth + 1).style({
+            fill: fillWhite,
+            border: borderLeft
+        });
         // name
         if ('name' in messageIE) {
             if (messageIE['name'] == '...') {
                 return rowNum;
             }
-            row.push(messageIE['name']);
-            styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTopLeft };
+            ws.cell(rowNum, k++).string(messageIE['name']).style({
+                fill: fillWhite,
+                border: borderTopLeft
+            });
         }
         else {
-            row.push(null);
-            styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderLeft };
+            ws.cell(rowNum, k++).style({
+                fill: fillWhite,
+                border: borderLeft
+            });
         }
-        k++;
-        for (let i = depth; i < depthMax; i++) {
-            row.push(null);
-            styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
-            k++;
-        }
+        ws.cell(rowNum, k, rowNum, k + (depthMax - depth)).style({
+            fill: fillWhite,
+            border: borderTop
+        });
+        k = depthMax + 2;
         // Optional, Conditional, Mandatory
+        let MOC = '';
         if ('optional' in messageIE) {
-            row.push('O');
+            MOC = 'O';
         }
         else if (isChoicable) {
-            row.push('C');
+            MOC = 'C';
         }
         else {
-            row.push('M');
+            MOC = 'M';
         }
-        styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
-        k++;
+        ws.cell(rowNum, k++).string(MOC).style({
+            fill: fillWhite,
+            border: borderTop
+        });
         // Choice
         isChoicable = false;
         if (messageIE['type'].includes('CHOICE')) {
             isChoicable = true;
         }
         // Need code, condition
+        let needCode = '';
         if ('needCode' in messageIE) {
-            row.push(messageIE['needCode'].substring(3));
+            needCode = messageIE['needCode'].substring(3);
         }
         else if ('condition' in messageIE) {
-            row.push(`Cond ${messageIE['condition']}`);
+            needCode = `Cond ${messageIE['condition']}`;
         }
-        else {
-            row.push(null);
-        }
-        styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
-        k++;
+        ws.cell(rowNum, k++).string(needCode).style({
+            fill: fillWhite,
+            border: borderTop
+        });
         // Custom IE name
+        let subIe = '';
         if ('subIE' in messageIE) {
-            row.push(messageIE['subIE']);
+            subIe = messageIE['subIE'];
         }
-        else {
-            row.push(null);
-        }
-        styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
-        k++;
+        ws.cell(rowNum, k++).string(subIe).style({
+            fill: fillWhite,
+            border: borderTop
+        });
         // Actual type
+        let type = '';
         if ('type' in messageIE) {
-            row.push(messageIE['type']);
+            type = messageIE['type'];
         }
-        else {
-            row.push(null);
-        }
-        styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
-        k++;
+        ws.cell(rowNum, k++).string(type).style({
+            fill: fillWhite,
+            border: borderTop
+        });
+        let defaultValue = '';
         if ('default' in messageIE) {
-            row.push(messageIE['default']);
+            defaultValue = `${messageIE['default']}`;
         }
-        styles[addr({ c: k, r: rowNum })] = { fill: fillWhite, border: borderTop };
-        k++;
-        worksheet_data.push(row);
+        ws.cell(rowNum, k++).string(defaultValue).style({
+            fill: fillWhite,
+            border: borderTop
+        });
         rowNum++;
         if ('content' in messageIE) {
             for (let item of messageIE['content']) {
-                rowNum = preorderHelper(worksheet_data, item, styles, rowNum, depthMax, depth + 1, isChoicable);
+                rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 1, isChoicable);
             }
         }
     }
