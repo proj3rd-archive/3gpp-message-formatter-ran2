@@ -127,34 +127,10 @@ export function expand(messageIE, asn1Json, depth = 0, raw = false) {
     } else if ('extensionAdditionGroup' in messageIE) {
         // TODO: This is experimental
         for (let item of messageIE['extensionAdditionGroup']) {
-            depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 1, raw));
+            depthMax = Math.max(depthMax, expand(Object.assign(item, {module: messageIE['module']}), asn1Json, depth + 2, raw));
         }
     }
     return depthMax;
-}
-
-export function expandAll(asn1Json, raw = false) {
-    let messageIEs = {};
-    for (let moduleName in asn1Json) {
-        messageIEs[moduleName] = {};
-        for (let definition in asn1Json[moduleName]) {
-            if (definition == 'import') {
-                continue;
-            }
-            let messageIE = Object.assign(JSON.parse(JSON.stringify(
-                                        asn1Json[moduleName][definition])),
-                                        {module: moduleName});
-            messageIEHelper(messageIE, definition);
-            if (messageIE['type'] == 'INTEGER') {
-                continue;
-            }
-            console.log(`Formatting ${moduleName}/${definition}...`);
-            let depthMax = expand(messageIE, asn1Json, 0, raw);
-            messageIE['depthMax'] = depthMax;
-            messageIEs[moduleName][definition] = messageIE;
-        }
-    }
-    return messageIEs;
 }
 
 function substituteArguments(messageIE, params, args) {
