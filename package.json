@@ -1,6 +1,6 @@
 {
   "name": "third-gen-message-formatter-ran2",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
@@ -13,7 +13,6 @@
     "pkg-win-x86": "pkg formatter.js -t node6-win-x86 -o formatter-x86.exe"
   },
   "dependencies": {
-    "@gsongsong/xlsx": "^0.13.3",
     "argparse": "^1.0.10",
     "excel4node": "^1.7.0",
     "readline-sync": "^1.4.9",
