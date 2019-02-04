@@ -105,10 +105,6 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable 
     else {
         let row = [];
         let k = depth ? depth + 1 : 1;
-        ws.cell(rowNum, 1, rowNum, depth + 1).style({
-            fill: fillWhite,
-            border: borderLeft
-        });
         // name
         if ('name' in messageIE) {
             if (messageIE['name'] == '...') {
@@ -125,6 +121,10 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable 
                 border: borderLeft
             });
         }
+        ws.cell(rowNum, 1, rowNum, depth + 1).style({
+            fill: fillWhite,
+            border: borderLeft
+        });
         ws.cell(rowNum, k, rowNum, k + (depthMax - depth)).style({
             fill: fillWhite,
             border: borderTop
