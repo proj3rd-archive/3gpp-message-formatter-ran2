@@ -72,31 +72,31 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable 
         return rowNum;
     }
     if ('extensionAdditionGroup' in messageIE) {
-        ws.cell(rowNum, 1, rowNum, depth + 1).style({
+        ws.cell(rowNum, 1, rowNum, depth).style({
             fill: fillWhite,
             border: borderLeft
         });
-        ws.cell(rowNum, depth + 2).string('[[').style({
+        ws.cell(rowNum, depth + 1).string('[[').style({
             fill: fillWhite,
             border: borderTopLeft
         });
-        ws.cell(rowNum, depth + 3, rowNum, depthMax + 6).style({
+        ws.cell(rowNum, depth + 2, rowNum, depthMax + 6).style({
             fill: fillWhite,
             border: borderTop
         });
         rowNum++;
         for (let item of messageIE['extensionAdditionGroup']) {
-            rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 2, isChoicable);
+            rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 1, isChoicable);
         }
-        ws.cell(rowNum, 1, rowNum, depth + 1).style({
+        ws.cell(rowNum, 1, rowNum, depth).style({
             fill: fillWhite,
             border: borderLeft
         });
-        ws.cell(rowNum, depth + 2).string(']]').style({
+        ws.cell(rowNum, depth + 1).string(']]').style({
             fill: fillWhite,
             border: borderTopLeft
         });
-        ws.cell(rowNum, depth + 3, rowNum, depthMax + 6).style({
+        ws.cell(rowNum, depth + 2, rowNum, depthMax + 6).style({
             fill: fillWhite,
             border: borderTop
         });
@@ -105,10 +105,6 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable 
     else {
         let row = [];
         let k = depth ? depth + 1 : 1;
-        ws.cell(rowNum, 1, rowNum, depth + 1).style({
-            fill: fillWhite,
-            border: borderLeft
-        });
         // name
         if ('name' in messageIE) {
             if (messageIE['name'] == '...') {
@@ -125,6 +121,10 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable 
                 border: borderLeft
             });
         }
+        ws.cell(rowNum, 1, rowNum, depth + 1).style({
+            fill: fillWhite,
+            border: borderLeft
+        });
         ws.cell(rowNum, k, rowNum, k + (depthMax - depth)).style({
             fill: fillWhite,
             border: borderTop
