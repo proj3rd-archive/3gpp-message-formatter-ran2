@@ -18,7 +18,11 @@ var borderAll = {
 function toWorkbook(messageIEname, messageIE, depthMax) {
     let workbook = new xlsx.Workbook();
     let sheetname = messageIEname.substring(0, 30);
-    let worksheet = workbook.addWorksheet(sheetname);
+    let worksheet = workbook.addWorksheet(sheetname, {
+        outline: {
+            summaryBelow: false
+        }
+    });
     fillWorksheet(worksheet, messageIE, depthMax);
     return workbook;
 }
@@ -72,6 +76,7 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable 
         return rowNum;
     }
     if ('extensionAdditionGroup' in messageIE) {
+        let rowGroupSummary = rowNum;
         ws.cell(rowNum, 1, rowNum, depth).style({
             fill: fillWhite,
             border: borderLeft
@@ -100,6 +105,13 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable 
             fill: fillWhite,
             border: borderTop
         });
+        if (depth + 1 < 8) {
+            for (let i = rowGroupSummary + 1; i <= rowNum; i++) {
+                if (ws.row(i).outlineLevel === null) {
+                    ws.row(i).group(depth + 1);
+                }
+            }
+        }
         rowNum++;
     }
     else {
@@ -188,10 +200,17 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable 
             fill: fillWhite,
             border: borderTop
         });
-        rowNum++;
+        let rowGroupSummary = rowNum++;
         if ('content' in messageIE) {
             for (let item of messageIE['content']) {
                 rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 1, isChoicable);
+            }
+            if (depth + 1 < 8 && rowNum > rowGroupSummary + 1) {
+                for (let i = rowGroupSummary + 1; i < rowNum; i++) {
+                    if (ws.row(i).outlineLevel === null) {
+                        ws.row(i).group(depth + 1);
+                    }
+                }
             }
         }
     }
