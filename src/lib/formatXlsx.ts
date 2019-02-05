@@ -107,10 +107,10 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0,
             fill: fillWhite,
             border: borderTop
         });
-        if (depth + 1 < 8) {
+        if (depth >= 1 && depth <= 7) {
             for (let i = rowGroupSummary + 1; i <= rowNum; i++) {
                 if (ws.row(i).outlineLevel === null) {
-                    ws.row(i).group(depth + 1);
+                    ws.row(i).group(depth);
                 }
             }
         }
@@ -202,10 +202,10 @@ function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0,
             for (let item of messageIE['content']) {
                 rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 1, isChoicable);
             }
-            if (depth + 1 < 8 && rowNum > rowGroupSummary + 1) {
+            if (depth >= 1 && depth <= 7 && rowNum > rowGroupSummary + 1) {
                 for (let i = rowGroupSummary + 1; i < rowNum; i++) {
                     if (ws.row(i).outlineLevel === null) {
-                        ws.row(i).group(depth + 1);
+                        ws.row(i).group(depth);
                     }
                 }
             }
