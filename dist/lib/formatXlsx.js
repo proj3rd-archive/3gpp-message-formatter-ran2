@@ -71,147 +71,164 @@ function fillWorksheet(ws, messageIE, depthMax) {
     }
 }
 exports.fillWorksheet = fillWorksheet;
-function preorderHelper(ws, messageIE, rowNum, depthMax, depth = 0, isChoicable = false) {
-    if (Object.keys(messageIE).length == 1 && 'module' in messageIE) {
-        return rowNum;
-    }
-    if ('extensionAdditionGroup' in messageIE) {
-        let rowGroupSummary = rowNum;
-        ws.cell(rowNum, 1, rowNum, depth).style({
-            fill: fillWhite,
-            border: borderLeft
-        });
-        ws.cell(rowNum, depth + 1).string('[[').style({
-            fill: fillWhite,
-            border: borderTopLeft
-        });
-        ws.cell(rowNum, depth + 2, rowNum, depthMax + 6).style({
-            fill: fillWhite,
-            border: borderTop
-        });
-        rowNum++;
-        for (let item of messageIE['extensionAdditionGroup']) {
-            rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 1, isChoicable);
+function preorderHelper(ws, ieInitial, rowNumInitial, depthMax, depthInitial = 0, isChoicable = false) {
+    let rowNum = rowNumInitial;
+    let queue = [{
+            ie: ieInitial,
+            depth: depthInitial,
+            isChoicable: isChoicable
+        }];
+    while (queue.length) {
+        let { ie, depth, isChoicable } = queue.shift();
+        if (Object.keys(ie).length == 1 && 'module' in ie) {
+            return rowNum;
         }
-        ws.cell(rowNum, 1, rowNum, depth).style({
-            fill: fillWhite,
-            border: borderLeft
-        });
-        ws.cell(rowNum, depth + 1).string(']]').style({
-            fill: fillWhite,
-            border: borderTopLeft
-        });
-        ws.cell(rowNum, depth + 2, rowNum, depthMax + 6).style({
-            fill: fillWhite,
-            border: borderTop
-        });
-        if (depth >= 1 && depth <= 7) {
-            for (let i = rowGroupSummary + 1; i <= rowNum; i++) {
-                if (ws.row(i).outlineLevel === null) {
-                    ws.row(i).group(depth);
-                }
-            }
-        }
-        rowNum++;
-    }
-    else {
-        let row = [];
-        let k = depth ? depth + 1 : 1;
-        // name
-        if ('name' in messageIE) {
-            if (messageIE['name'] == '...') {
-                return rowNum;
-            }
-            ws.cell(rowNum, k++).string(messageIE['name']).style({
-                fill: fillWhite,
-                border: borderTopLeft
-            });
-        }
-        else {
-            ws.cell(rowNum, k++).style({
+        if ('extensionAdditionGroup' in ie) {
+            let rowGroupSummary = rowNum;
+            ws.cell(rowNum, 1, rowNum, depth).style({
                 fill: fillWhite,
                 border: borderLeft
             });
-        }
-        ws.cell(rowNum, 1, rowNum, depth + 1).style({
-            fill: fillWhite,
-            border: borderLeft
-        });
-        ws.cell(rowNum, k, rowNum, k + (depthMax - depth)).style({
-            fill: fillWhite,
-            border: borderTop
-        });
-        k = depthMax + 2;
-        // Optional, Conditional, Mandatory
-        let MOC = '';
-        if ('optional' in messageIE) {
-            MOC = 'O';
-        }
-        else if (isChoicable) {
-            MOC = 'C';
-        }
-        else {
-            MOC = 'M';
-        }
-        ws.cell(rowNum, k++).string(MOC).style({
-            fill: fillWhite,
-            border: borderTop
-        });
-        // Choice
-        isChoicable = false;
-        if (messageIE['type'].includes('CHOICE')) {
-            isChoicable = true;
-        }
-        // Need code, condition
-        let needCode = '';
-        if ('needCode' in messageIE) {
-            needCode = messageIE['needCode'].substring(3);
-        }
-        else if ('condition' in messageIE) {
-            needCode = `Cond ${messageIE['condition']}`;
-        }
-        ws.cell(rowNum, k++).string(needCode).style({
-            fill: fillWhite,
-            border: borderTop
-        });
-        // Custom IE name
-        let subIe = '';
-        if ('subIE' in messageIE) {
-            subIe = messageIE['subIE'];
-        }
-        ws.cell(rowNum, k++).string(subIe).style({
-            fill: fillWhite,
-            border: borderTop
-        });
-        // Actual type
-        let type = '';
-        if ('type' in messageIE) {
-            type = messageIE['type'];
-        }
-        ws.cell(rowNum, k++).string(type).style({
-            fill: fillWhite,
-            border: borderTop
-        });
-        let defaultValue = '';
-        if ('default' in messageIE) {
-            defaultValue = `${messageIE['default']}`;
-        }
-        ws.cell(rowNum, k++).string(defaultValue).style({
-            fill: fillWhite,
-            border: borderTop
-        });
-        let rowGroupSummary = rowNum++;
-        if ('content' in messageIE) {
-            for (let item of messageIE['content']) {
+            ws.cell(rowNum, depth + 1).string('[[').style({
+                fill: fillWhite,
+                border: borderTopLeft
+            });
+            ws.cell(rowNum, depth + 2, rowNum, depthMax + 6).style({
+                fill: fillWhite,
+                border: borderTop
+            });
+            rowNum++;
+            for (let item of ie['extensionAdditionGroup']) {
                 rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 1, isChoicable);
             }
-            if (depth >= 1 && depth <= 7 && rowNum > rowGroupSummary + 1) {
-                for (let i = rowGroupSummary + 1; i < rowNum; i++) {
+            ws.cell(rowNum, 1, rowNum, depth).style({
+                fill: fillWhite,
+                border: borderLeft
+            });
+            ws.cell(rowNum, depth + 1).string(']]').style({
+                fill: fillWhite,
+                border: borderTopLeft
+            });
+            ws.cell(rowNum, depth + 2, rowNum, depthMax + 6).style({
+                fill: fillWhite,
+                border: borderTop
+            });
+            // FIXME
+            if (depth >= 1 && depth <= 7) {
+                for (let i = rowGroupSummary + 1; i <= rowNum; i++) {
                     if (ws.row(i).outlineLevel === null) {
                         ws.row(i).group(depth);
                     }
                 }
             }
+            rowNum++;
+        }
+        else {
+            let k = depth ? depth + 1 : 1;
+            // name
+            if ('name' in ie) {
+                if (ie['name'] == '...') {
+                    continue;
+                }
+                ws.cell(rowNum, k++).string(ie['name']).style({
+                    fill: fillWhite,
+                    border: borderTopLeft
+                });
+            }
+            else {
+                ws.cell(rowNum, k++).style({
+                    fill: fillWhite,
+                    border: borderLeft
+                });
+            }
+            ws.cell(rowNum, 1, rowNum, depth + 1).style({
+                fill: fillWhite,
+                border: borderLeft
+            });
+            ws.cell(rowNum, k, rowNum, k + (depthMax - depth)).style({
+                fill: fillWhite,
+                border: borderTop
+            });
+            k = depthMax + 2;
+            // Optional, Conditional, Mandatory
+            let MOC = '';
+            if ('optional' in ie) {
+                MOC = 'O';
+            }
+            else if (isChoicable) {
+                MOC = 'C';
+            }
+            else {
+                MOC = 'M';
+            }
+            ws.cell(rowNum, k++).string(MOC).style({
+                fill: fillWhite,
+                border: borderTop
+            });
+            // Choice
+            isChoicable = false;
+            if (ie['type'].includes('CHOICE')) {
+                isChoicable = true;
+            }
+            // Need code, condition
+            let needCode = '';
+            if ('needCode' in ie) {
+                needCode = ie['needCode'].substring(3);
+            }
+            else if ('condition' in ie) {
+                needCode = `Cond ${ie['condition']}`;
+            }
+            ws.cell(rowNum, k++).string(needCode).style({
+                fill: fillWhite,
+                border: borderTop
+            });
+            // Custom IE name
+            let subIe = '';
+            if ('subIE' in ie) {
+                subIe = ie['subIE'];
+            }
+            ws.cell(rowNum, k++).string(subIe).style({
+                fill: fillWhite,
+                border: borderTop
+            });
+            // Actual type
+            let type = '';
+            if ('type' in ie) {
+                type = ie['type'];
+            }
+            ws.cell(rowNum, k++).string(type).style({
+                fill: fillWhite,
+                border: borderTop
+            });
+            let defaultValue = '';
+            if ('default' in ie) {
+                defaultValue = `${ie['default']}`;
+            }
+            ws.cell(rowNum, k++).string(defaultValue).style({
+                fill: fillWhite,
+                border: borderTop
+            });
+            let rowGroupSummary = rowNum++;
+            if ('content' in ie) {
+                let queueTemp = [];
+                for (let item of ie['content']) {
+                    queueTemp.push({
+                        ie: item,
+                        depth: depth + 1,
+                        isChoicable: isChoicable
+                    });
+                }
+                queue = queueTemp.concat(queue);
+                // FIXME
+                if (depth >= 1 && depth <= 7 && rowNum > rowGroupSummary + 1) {
+                    for (let i = rowGroupSummary + 1; i < rowNum; i++) {
+                        if (ws.row(i).outlineLevel === null) {
+                            ws.row(i).group(depth);
+                        }
+                    }
+                }
+            }
+            continue;
         }
     }
     return rowNum;
