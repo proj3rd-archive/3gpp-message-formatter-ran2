@@ -1,1 +1,1 @@
-export declare function expand(messageIE: any, asn1Json: any, depth?: number, raw?: boolean): number;
+export declare function expand(ieInitial: any, asn1Json: any, depthInitial?: number, raw?: boolean): number;

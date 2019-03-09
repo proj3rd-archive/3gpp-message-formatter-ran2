@@ -4,130 +4,152 @@ let getUniqueMessageIE = require('third-gen-asn1-parser').getUniqueMessageIE;
 var builtIns = ['BIT STRING', 'BOOLEAN', 'ENUMERATED', 'INTEGER', 'NULL',
     'OCTET STRING', 'CHOICE', 'SEQUENCE', 'SEQUENCE OF',
     'BIT', 'OCTET' /* HACK */];
-function expand(messageIE, asn1Json, depth = 0, raw = false) {
-    // TODO: more elegant way?
-    if (!('constants' in messageIE)) {
-        messageIE['constants'] = {};
+function expand(ieInitial, asn1Json, depthInitial = 0, raw = false) {
+    let queue = [{
+            ie: ieInitial,
+            depth: depthInitial,
+        }];
+    if (!('constants' in ieInitial)) {
+        ieInitial['constants'] = {};
     }
-    let depthMax = depth;
-    if ('type' in messageIE) {
-        switch (messageIE['type']) {
-            case 'BOOLEAN':
-            case 'NULL':
-                break;
-            case 'BIT STRING':
-                messageIE['type'] += ` ${getSizeExpression(messageIE, asn1Json)}`;
-                delete messageIE['size'];
-                delete messageIE['sizeMin'];
-                delete messageIE['sizeMax'];
-                break;
-            case 'ENUMERATED':
-                messageIE['type'] += ` {${messageIE['content'].join(', ')}}`;
-                delete messageIE['content'];
-                break;
-            case 'INTEGER':
-                messageIE['type'] += ` ${integerHelper(messageIE, asn1Json)}`;
-                delete messageIE['value'];
-                delete messageIE['start'];
-                delete messageIE['end'];
-                break;
-            case 'OCTET STRING':
-                if ('containing' in messageIE) {
-                    let containedName = messageIE['containing'];
-                    delete messageIE['containing'];
-                    messageIE['type'] += ` (CONTAINING ${containedName})`;
-                    if (!raw) {
-                        let containedIE = getUniqueMessageIE(containedName, asn1Json, messageIE['module']);
-                        delete containedIE['inventory'];
-                        messageIE['content'] = [containedIE];
-                        messageIE['content'][0]['name'] = containedName;
+    let depthMax = depthInitial;
+    while (queue.length) {
+        let { ie: messageIE, depth } = queue.shift();
+        depthMax = Math.max(depthMax, depth);
+        if ('type' in messageIE) {
+            switch (messageIE['type']) {
+                case 'BOOLEAN':
+                case 'NULL':
+                    break;
+                case 'BIT STRING':
+                    messageIE['type'] += ` ${getSizeExpression(messageIE, asn1Json)}`;
+                    delete messageIE['size'];
+                    delete messageIE['sizeMin'];
+                    delete messageIE['sizeMax'];
+                    break;
+                case 'ENUMERATED':
+                    messageIE['type'] += ` {${messageIE['content'].join(', ')}}`;
+                    delete messageIE['content'];
+                    break;
+                case 'INTEGER':
+                    messageIE['type'] += ` ${integerHelper(messageIE, asn1Json)}`;
+                    delete messageIE['value'];
+                    delete messageIE['start'];
+                    delete messageIE['end'];
+                    break;
+                case 'OCTET STRING':
+                    if ('containing' in messageIE) {
+                        let containedName = messageIE['containing'];
+                        delete messageIE['containing'];
+                        messageIE['type'] += ` (CONTAINING ${containedName})`;
+                        if (!raw) {
+                            let containedIE = getUniqueMessageIE(containedName, asn1Json, messageIE['module']);
+                            delete containedIE['inventory'];
+                            messageIE['content'] = [containedIE];
+                            messageIE['content'][0]['name'] = containedName;
+                            for (let item of messageIE['content']) {
+                                queue.push({
+                                    ie: Object.assign(item, { module: messageIE['module'] }),
+                                    depth: depth + 1,
+                                });
+                                mergeConstants(ieInitial, item);
+                            }
+                        }
+                    }
+                    break;
+                case 'SEQUENCE OF':
+                    let memberName = messageIE['member']['type'];
+                    messageIE['type'] = `SEQUENCE ${getSizeExpression(messageIE, asn1Json)} OF ${messageIE['member']['type']} ${integerHelper(messageIE['member'], asn1Json)}`;
+                    if ('content' in messageIE['member']) {
+                        messageIE['content'] = messageIE['member']['content'];
                         for (let item of messageIE['content']) {
-                            depthMax = Math.max(depthMax, expand(Object.assign(item, { module: messageIE['module'] }), asn1Json, depth + 1, raw));
-                            mergeConstants(messageIE, item);
+                            queue.push({
+                                ie: Object.assign(item, { module: messageIE['module'] }),
+                                depth: depth + 1
+                            });
+                            mergeConstants(ieInitial, item);
                         }
                     }
-                }
-                break;
-            case 'SEQUENCE OF':
-                let memberName = messageIE['member']['type'];
-                messageIE['type'] = `SEQUENCE ${getSizeExpression(messageIE, asn1Json)} OF ${messageIE['member']['type']} ${integerHelper(messageIE['member'], asn1Json)}`;
-                if ('content' in messageIE['member']) {
-                    messageIE['content'] = messageIE['member']['content'];
-                    for (let item of messageIE['content']) {
-                        depthMax = Math.max(depthMax, expand(Object.assign(item, { module: messageIE['module'] }), asn1Json, depth + 1, raw));
-                        mergeConstants(messageIE, item);
+                    delete messageIE['member'];
+                    delete messageIE['size'];
+                    delete messageIE['sizeMin'];
+                    delete messageIE['sizeMax'];
+                    if (builtIns.indexOf(memberName) == -1 && !raw) {
+                        let memberIE = getUniqueMessageIE(memberName, asn1Json, messageIE['module']);
+                        delete memberIE['inventory'];
+                        messageIE['content'] = [memberIE];
+                        messageIE['content'][0]['name'] = memberName;
+                        for (let item of messageIE['content']) {
+                            queue.push({
+                                ie: Object.assign(item, { module: messageIE['module'] }),
+                                depth: depth + 1
+                            });
+                            mergeConstants(ieInitial, item);
+                        }
                     }
-                }
-                delete messageIE['member'];
-                delete messageIE['size'];
-                delete messageIE['sizeMin'];
-                delete messageIE['sizeMax'];
-                if (builtIns.indexOf(memberName) == -1 && !raw) {
-                    let memberIE = getUniqueMessageIE(memberName, asn1Json, messageIE['module']);
-                    delete memberIE['inventory'];
-                    messageIE['content'] = [memberIE];
-                    messageIE['content'][0]['name'] = memberName;
+                    break;
+                case 'CHOICE':
+                case 'SEQUENCE':
                     for (let item of messageIE['content']) {
-                        depthMax = Math.max(depthMax, expand(Object.assign(item, { module: messageIE['module'] }), asn1Json, depth + 1, raw));
-                        mergeConstants(messageIE, item);
+                        queue.push({
+                            ie: Object.assign(item, { module: messageIE['module'] }),
+                            depth: depth + 1
+                        });
+                        mergeConstants(ieInitial, item);
                     }
-                }
-                break;
-            case 'CHOICE':
-            case 'SEQUENCE':
-                for (let item of messageIE['content']) {
-                    depthMax = Math.max(depthMax, expand(Object.assign(item, { module: messageIE['module'] }), asn1Json, depth + 1, raw));
-                    mergeConstants(messageIE, item);
-                }
-                break;
-            default:
-                if (builtIns.indexOf(messageIE['type'].split(' ')[0]) == -1) {
-                    if ('parameters' in messageIE) {
-                        if (messageIE['parameters'].length) {
-                            let newType = `${messageIE['type']} {${messageIE['parameters']
-                                .join(', ')}}`;
-                            if (raw) {
-                                messageIE['type'] = newType;
+                    break;
+                default:
+                    if (builtIns.indexOf(messageIE['type'].split(' ')[0]) == -1) {
+                        if ('parameters' in messageIE) {
+                            if (messageIE['parameters'].length) {
+                                let newType = `${messageIE['type']} {${messageIE['parameters']
+                                    .join(', ')}}`;
+                                if (raw) {
+                                    messageIE['type'] = newType;
+                                }
+                                else {
+                                    messageIE['subIE'] = newType;
+                                    let type = getUniqueMessageIE(messageIE['type'], asn1Json, messageIE['module']);
+                                    substituteArguments(type, type['parameters'], messageIE['parameters']);
+                                    Object.assign(messageIE, type);
+                                    queue.push({
+                                        ie: messageIE,
+                                        depth: depth
+                                    });
+                                }
                             }
-                            else {
-                                messageIE['subIE'] = newType;
+                            messageIE['parameters'] = [];
+                        }
+                        else {
+                            if (!messageIE['isParameter'] && !raw) {
+                                messageIE['subIE'] = messageIE['type'];
                                 let type = getUniqueMessageIE(messageIE['type'], asn1Json, messageIE['module']);
-                                substituteArguments(type, type['parameters'], messageIE['parameters']);
+                                delete type['inventory'];
                                 Object.assign(messageIE, type);
-                                depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth, raw));
+                                if ('content' in messageIE) {
+                                    // ie['content'][0]['name'] = ie['subIE'];
+                                }
+                                queue.push({
+                                    ie: messageIE,
+                                    depth: depth
+                                });
                             }
                         }
-                        messageIE['parameters'] = [];
                     }
-                    else {
-                        if (!messageIE['isParameter'] && !raw) {
-                            messageIE['subIE'] = messageIE['type'];
-                            let type = getUniqueMessageIE(messageIE['type'], asn1Json, messageIE['module']);
-                            delete type['inventory'];
-                            Object.assign(messageIE, type);
-                            if ('content' in messageIE) {
-                                // messageIE['content'][0]['name'] = messageIE['subIE'];
-                            }
-                            depthMax = Math.max(depthMax, expand(messageIE, asn1Json, depth, raw));
-                        }
-                    }
-                }
-                if ('content' in messageIE) {
-                    for (let item of messageIE['content']) {
-                        depthMax = Math.max(depthMax, expand(item, asn1Json, depth + 1, raw));
-                        mergeConstants(messageIE, item);
-                    }
-                }
-                break;
+                    break;
+            }
         }
-    }
-    else if ('name' in messageIE) {
-        // delete messageIE['name'];
-    }
-    else if ('extensionAdditionGroup' in messageIE) {
-        // TODO: This is experimental
-        for (let item of messageIE['extensionAdditionGroup']) {
-            depthMax = Math.max(depthMax, expand(Object.assign(item, { module: messageIE['module'] }), asn1Json, depth + 2, raw));
+        else if ('name' in messageIE) {
+            // delete messageIE['name'];
+        }
+        else if ('extensionAdditionGroup' in messageIE) {
+            // TODO: This is experimental
+            for (let item of messageIE['extensionAdditionGroup']) {
+                queue.push({
+                    ie: Object.assign(item, { module: messageIE['module'] }),
+                    depth: depth + 2
+                });
+            }
         }
     }
     return depthMax;
