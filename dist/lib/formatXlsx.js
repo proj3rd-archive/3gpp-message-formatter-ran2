@@ -195,7 +195,12 @@ function preorderHelper(ws, ieInitial, rowNumInitial, depthMax, depthInitial = 0
                 fill: fillWhite,
                 border: borderTop
             });
-            let rowGroupSummary = rowNum++;
+            if (depth >= 1) {
+                if (ws.row(rowNum).outlineLevel === null || ws.row(rowNum).outlineLevel < depth) {
+                    ws.row(rowNum).group(Math.min(depth, 7));
+                }
+            }
+            rowNum++;
             if ('content' in ie) {
                 let queueTemp = [];
                 for (let item of ie['content']) {
@@ -206,14 +211,6 @@ function preorderHelper(ws, ieInitial, rowNumInitial, depthMax, depthInitial = 0
                     });
                 }
                 queue = queueTemp.concat(queue);
-                // FIXME
-                if (depth >= 1 && depth <= 7 && rowNum > rowGroupSummary + 1) {
-                    for (let i = rowGroupSummary + 1; i < rowNum; i++) {
-                        if (ws.row(i).outlineLevel === null) {
-                            ws.row(i).group(depth);
-                        }
-                    }
-                }
             }
             continue;
         }
