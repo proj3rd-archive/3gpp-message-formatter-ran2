@@ -93,43 +93,30 @@ function preorderHelper(ws: any, ieInitial: any, rowNumInitial: number,
         }
         if ('extensionAdditionGroup' in ie) {
             let rowGroupSummary = rowNum;
-            ws.cell(rowNum, 1, rowNum, depth).style({
-                fill: fillWhite,
-                border: borderLeft
+            let queueTemp: IQueueItem[] = [];
+            queueTemp.push({
+                ie: {
+                    name: '[['
+                },
+                depth: depth,
+                isChoicable: isChoicable
             });
-            ws.cell(rowNum, depth + 1).string('[[').style({
-                fill: fillWhite,
-                border: borderTopLeft
-            });
-            ws.cell(rowNum, depth + 2 , rowNum, depthMax + 6).style({
-                fill: fillWhite,
-                border: borderTop
-            });
-            rowNum++;
             for (let item of ie['extensionAdditionGroup']) {
-                rowNum = preorderHelper(ws, item, rowNum, depthMax, depth + 1, isChoicable);
+                queueTemp.push({
+                    ie: item,
+                    depth: depth + 1,
+                    isChoicable: isChoicable
+                });
             }
-            ws.cell(rowNum, 1, rowNum, depth).style({
-                fill: fillWhite,
-                border: borderLeft
+            queueTemp.push({
+                ie: {
+                    name: ']]'
+                },
+                depth: depth,
+                isChoicable: isChoicable
             });
-            ws.cell(rowNum, depth + 1).string(']]').style({
-                fill: fillWhite,
-                border: borderTopLeft
-            });
-            ws.cell(rowNum, depth + 2 , rowNum, depthMax + 6).style({
-                fill: fillWhite,
-                border: borderTop
-            });
-            // FIXME
-            if (depth >= 1 && depth <= 7) {
-                for (let i = rowGroupSummary + 1; i <= rowNum; i++) {
-                    if (ws.row(i).outlineLevel === null) {
-                        ws.row(i).group(depth);
-                    }
-                }
-            }
-            rowNum++;
+            queue = queueTemp.concat(queue);
+            continue;
         } else {
             let k = depth ? depth + 1 : 1;
             // name
@@ -162,7 +149,7 @@ function preorderHelper(ws: any, ieInitial: any, rowNumInitial: number,
                 MOC = 'O'
             } else if (isChoicable) {
                 MOC = 'C';
-            } else {
+            } else if (ie.name != '[[' && ie.name != ']]') {
                 MOC = 'M';
             }
             ws.cell(rowNum, k++).string(MOC).style({
@@ -171,7 +158,7 @@ function preorderHelper(ws: any, ieInitial: any, rowNumInitial: number,
             });
             // Choice
             isChoicable = false;
-            if (ie['type'].includes('CHOICE')) {
+            if (ie.type && ie['type'].includes('CHOICE')) {
                 isChoicable = true;
             }
             // Need code, condition
